@@ -1,0 +1,35 @@
+# Git ignore
+.env
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Maven
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# Node
+node_modules/
+dist/
+.npm
+
+# Build
+build/
+out/
+infor.md
+
+# Secrets (DO NOT COMMIT)
+argocd/gitlab-repo-secret.yaml
+*secret*.yaml
+*.secret

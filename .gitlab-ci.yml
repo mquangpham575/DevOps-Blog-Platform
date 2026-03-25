@@ -1,0 +1,321 @@
+stages:
+  - validate
+  - build
+  - test
+  - docker-build
+  - scan
+  - deploy
+
+# --- Validation Stage (Always Runs) ---
+validate-pipeline:
+  stage: validate
+  image: alpine:latest
+  script:
+    - echo "Pipeline syntax is valid"
+    - echo "Commit SHA - $CI_COMMIT_SHORT_SHA"
+    - echo "Branch - $CI_COMMIT_REF_NAME"
+    - echo "Changes in this commit"
+    - git diff --name-only $CI_COMMIT_BEFORE_SHA..$CI_COMMIT_SHA || echo "Initial commit or no previous SHA"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+
+# --- Change Detection Templates ---
+.user-service-changes:
+  rules:
+    - changes:
+        - backend/user-service/**/*
+
+.blog-service-changes:
+  rules:
+    - changes:
+        - backend/blog-service/**/*
+
+.file-service-changes:
+  rules:
+    - changes:
+        - backend/file-service/**/*
+
+.frontend-changes:
+  rules:
+    - changes:
+        - frontend/**/*
+
+.user-service-main-changes:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/user-service/**/*
+
+.blog-service-main-changes:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/blog-service/**/*
+
+.file-service-main-changes:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/file-service/**/*
+
+.frontend-main-changes:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - frontend/**/*
+
+variables:
+  DOCKER_DRIVER: overlay2
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .m2/repository/
+
+# --- Templates (DRY Principle) ---
+.backend_build_template: &backend_build_def
+  image: maven:3.9.6-eclipse-temurin-17
+  stage: build
+  script:
+    - cd $SERVICE_DIR
+    # Maven will now automatically use the path defined in MAVEN_OPTS
+    - mvn package -DskipTests
+  artifacts:
+    paths:
+      - $SERVICE_DIR/target/*.jar
+    expire_in: 1 day
+
+.backend_test_template: &backend_test_def
+  image: maven:3.9.6-eclipse-temurin-17
+  stage: test
+  script:
+    - cd $SERVICE_DIR
+    - mvn test -Dmaven.main.skip=true
+
+.docker_build_template: &docker_build_def
+  image: docker:24.0.5
+  stage: docker-build
+  services:
+    - name: docker:24.0.5-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "/certs/client"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest -f $SERVICE_DIR/Dockerfile $SERVICE_DIR
+    - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
+    - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest
+
+# --- Build Stage ---
+build-user-service:
+  <<: *backend_build_def
+  extends: .user-service-changes
+  variables:
+    SERVICE_DIR: "backend/user-service"
+
+build-blog-service:
+  <<: *backend_build_def
+  extends: .blog-service-changes
+  variables:
+    SERVICE_DIR: "backend/blog-service"
+
+build-file-service:
+  <<: *backend_build_def
+  extends: .file-service-changes
+  variables:
+    SERVICE_DIR: "backend/file-service"
+
+build-frontend:
+  image: node:20-alpine
+  stage: build
+  extends: .frontend-changes
+  # Frontend uses its own cache to avoid overwriting/conflicting with Java cache
+  cache:
+    key: "node-$CI_COMMIT_REF_SLUG"
+    paths:
+      - frontend/node_modules/
+  script:
+    - cd frontend
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 day
+
+# --- Test Stage ---
+test-user-service:
+  <<: *backend_test_def
+  extends: .user-service-changes
+  variables:
+    SERVICE_DIR: "backend/user-service"
+  dependencies:
+    - build-user-service
+
+test-blog-service:
+  <<: *backend_test_def
+  extends: .blog-service-changes
+  variables:
+    SERVICE_DIR: "backend/blog-service"
+  dependencies:
+    - build-blog-service
+
+test-file-service:
+  <<: *backend_test_def
+  extends: .file-service-changes
+  variables:
+    SERVICE_DIR: "backend/file-service"
+  dependencies:
+    - build-file-service
+
+test-frontend:
+  image: node:20-alpine
+  stage: test
+  extends: .frontend-changes
+  script:
+    - cd frontend
+    - npm ci
+    - npm test --if-present || echo "Tests not configured yet"
+  dependencies:
+    - build-frontend
+
+# --- Docker Build Stage ---
+docker-user-service:
+  <<: *docker_build_def
+  extends: .user-service-main-changes
+  variables:
+    SERVICE_DIR: "backend/user-service"
+    IMAGE_NAME: "user-service"
+  dependencies:
+    - build-user-service
+
+docker-blog-service:
+  <<: *docker_build_def
+  extends: .blog-service-main-changes
+  variables:
+    SERVICE_DIR: "backend/blog-service"
+    IMAGE_NAME: "blog-service"
+  dependencies:
+    - build-blog-service
+
+docker-file-service:
+  <<: *docker_build_def
+  extends: .file-service-main-changes
+  variables:
+    SERVICE_DIR: "backend/file-service"
+    IMAGE_NAME: "file-service"
+  dependencies:
+    - build-file-service
+
+docker-frontend:
+  <<: *docker_build_def
+  extends: .frontend-main-changes
+  variables:
+    SERVICE_DIR: "frontend"
+    IMAGE_NAME: "frontend"
+  dependencies:
+    - build-frontend
+
+# --- Deploy Stage Template (ArgoCD / GitOps Sync) ---
+.deploy_template:
+  stage: deploy
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]
+  resource_group: production-deploy
+  before_script:
+    - git config --global user.name "Gitlab CI"
+    - git config --global user.email "ci@gitlab.com"
+    - git remote set-url origin https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+  script:
+    - "sed -i \"/name: .*\\/$SERVICE_NAME/{n;s/newTag: .*/newTag: $CI_COMMIT_SHORT_SHA/}\" k8s/base/kustomization.yaml"
+    - git add k8s/base/kustomization.yaml
+    - git commit -m "Update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]" || echo "No changes to commit"
+    - |
+      for i in $(seq 1 5); do
+        git pull --rebase origin main || true
+        git push origin HEAD:main && break || sleep $((RANDOM % 5 + 1))
+      done
+
+deploy-user-service:
+  extends:
+    - .deploy_template
+    - .user-service-main-changes
+  variables:
+    SERVICE_NAME: "user-service"
+  needs:
+    - test-user-service
+    - docker-user-service
+    - job: container-scan
+      optional: true
+
+deploy-blog-service:
+  extends:
+    - .deploy_template
+    - .blog-service-main-changes
+  variables:
+    SERVICE_NAME: "blog-service"
+  needs:
+    - test-blog-service
+    - docker-blog-service
+    - job: container-scan
+      optional: true
+
+deploy-file-service:
+  extends:
+    - .deploy_template
+    - .file-service-main-changes
+  variables:
+    SERVICE_NAME: "file-service"
+  needs:
+    - test-file-service
+    - docker-file-service
+    - job: container-scan
+      optional: true
+
+deploy-frontend:
+  extends:
+    - .deploy_template
+    - .frontend-main-changes
+  variables:
+    SERVICE_NAME: "frontend"
+  needs:
+    - test-frontend
+    - docker-frontend
+    - job: container-scan
+      optional: true
+
+# --- Security Scan (DevSecOps) ---
+container-scan:
+  stage: scan
+  image:
+    name: aquasec/trivy:0.69.3
+    entrypoint: [""]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/user-service/**/*
+        - backend/blog-service/**/*
+        - backend/file-service/**/*
+        - frontend/**/*
+  needs:
+    - job: docker-user-service
+      optional: true
+    - job: docker-blog-service
+      optional: true
+    - job: docker-file-service
+      optional: true
+    - job: docker-frontend
+      optional: true
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA || true
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA || true
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA || true
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA || true
+    - echo "Scan finished for version $CI_COMMIT_SHORT_SHA. Review results above."
+  allow_failure: true
