@@ -25,7 +25,8 @@ data:
             {
               "expr": "up",
               "legendFormat": "{{job}}",
-              "refId": "A"
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
             }
           ],
           "fieldConfig": {
@@ -58,7 +59,8 @@ data:
             {
               "expr": "rate(http_server_requests_seconds_count[5m])",
               "legendFormat": "{{job}}",
-              "refId": "A"
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
             }
           ],
           "fieldConfig": {
@@ -77,7 +79,8 @@ data:
             {
               "expr": "1000 * histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))",
               "legendFormat": "{{job}}",
-              "refId": "A"
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
             }
           ],
           "fieldConfig": {
@@ -96,7 +99,8 @@ data:
             {
               "expr": "jvm_memory_used_bytes{area=\"heap\"}",
               "legendFormat": "{{job}}",
-              "refId": "A"
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
             }
           ],
           "fieldConfig": {
@@ -110,6 +114,41 @@ data:
     }
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: monitoring
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus.monitoring.svc:9090
+        isDefault: true
+        editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-prov
+  namespace: monitoring
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'Kubernetes Dashboards'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: grafana-secrets
@@ -118,10 +157,62 @@ type: Opaque
 data:
   GRAFANA_PASSWORD: YWRtaW4xMjM=  # admin123
 ---
-apiVersion: v1
-kind: ConfigMap
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: grafana-dashboards
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.4.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secrets
+                  key: GRAFANA_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/grafana
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+              readOnly: true
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+            - name: dashboard-prov
+              mountPath: /etc/grafana/provisioning/dashboards
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: dashboards
+          configMap:
+            name: grafana-dashboards
         - name: datasources
           configMap:
             name: grafana-provisioning
