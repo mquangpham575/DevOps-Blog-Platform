@@ -31,9 +31,14 @@ data:
               names:
                 - blog-app
         relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          - source_labels: [__meta_kubernetes_service_name]
             action: keep
-            regex: user-service;http
+            regex: user-service
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: replace
+            target_label: port
+            regex: http
+            replacement: "8081"
 
       - job_name: 'blog-service'
         metrics_path: '/actuator/prometheus'
@@ -43,9 +48,14 @@ data:
               names:
                 - blog-app
         relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          - source_labels: [__meta_kubernetes_service_name]
             action: keep
-            regex: blog-service;http
+            regex: blog-service
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: replace
+            target_label: port
+            regex: http
+            replacement: "8082"
 
       - job_name: 'file-service'
         metrics_path: '/actuator/prometheus'
@@ -55,9 +65,14 @@ data:
               names:
                 - blog-app
         relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          - source_labels: [__meta_kubernetes_service_name]
             action: keep
-            regex: file-service;http
+            regex: file-service
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: replace
+            target_label: port
+            regex: http
+            replacement: "8083"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
