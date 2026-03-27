@@ -25,54 +25,18 @@ data:
 
       - job_name: 'user-service'
         metrics_path: '/actuator/prometheus'
-        kubernetes_sd_configs:
-          - role: endpoints
-            namespaces:
-              names:
-                - blog-app
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name]
-            action: keep
-            regex: user-service
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            action: replace
-            target_label: port
-            regex: http
-            replacement: "8081"
+        static_configs:
+          - targets: ['user-service.blog-app.svc.cluster.local:8081']
 
       - job_name: 'blog-service'
         metrics_path: '/actuator/prometheus'
-        kubernetes_sd_configs:
-          - role: endpoints
-            namespaces:
-              names:
-                - blog-app
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name]
-            action: keep
-            regex: blog-service
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            action: replace
-            target_label: port
-            regex: http
-            replacement: "8082"
+        static_configs:
+          - targets: ['blog-service.blog-app.svc.cluster.local:8082']
 
       - job_name: 'file-service'
         metrics_path: '/actuator/prometheus'
-        kubernetes_sd_configs:
-          - role: endpoints
-            namespaces:
-              names:
-                - blog-app
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name]
-            action: keep
-            regex: file-service
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            action: replace
-            target_label: port
-            regex: http
-            replacement: "8083"
+        static_configs:
+          - targets: ['file-service.blog-app.svc.cluster.local:8083']
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
