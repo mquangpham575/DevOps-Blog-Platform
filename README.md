@@ -19,6 +19,23 @@ A microservices-based blog application built for the NT548.Q21 DevOps course. Th
 
 ## Architecture
 
+### Traffic Flow
+
+```
+User → k3d Load Balancer (port 8080) → Frontend Pod (nginx)
+                                                  ↓
+                                    ┌─────────────┼─────────────┐
+                                    ↓             ↓             ↓
+                              User Service   Blog Service   File Service
+                                    ↓             ↓             ↓
+                                user-db      blog-db       file-db
+```
+
+**Note:** API routing is handled by nginx in the Frontend pod (not by Ingress). This provides:
+- Simpler architecture (no ingress controller routing issues)
+- Each service can fail independently without affecting others
+- Easier debugging (all in one nginx config)
+
 ```mermaid
 graph TB
     subgraph Frontend
@@ -143,14 +160,31 @@ Add to your hosts file (`/etc/hosts` or `C:\Windows\System32\drivers\etc\hosts`)
 
 ### Access
 
-| Service  | URL                                    | Notes                                                                                                                        |
-| -------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| ArgoCD   | `https://argocd.local:8443` (local)   | Get password: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" \| base64 -d`           |
-|          | `https://argocd.local:8080` (remote)  | Server: `192.168.1.197` - Add `192.168.1.197 argocd.local` to hosts file                                                   |
-| Frontend | `http://localhost:3000` (local)        | `kubectl port-forward -n blog-app svc/frontend 3000:80`                                                                     |
-|          | `http://192.168.1.197:8080` (remote)   | Direct access on server network                                                                                             |
-| Grafana  | `http://localhost:3001` (local)        | `kubectl port-forward -n monitoring svc/grafana 3001:3000`                                                                  |
-|          | `http://192.168.1.197:3001` (remote)  | Direct access on server network                                                                                             |
+| Service  | URL                             | Notes                                                                                                                        |
+| -------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Frontend | `http://192.168.1.197:8080`     | Main entry point - React app + API reverse proxy                                                                            |
+| ArgoCD   | `http://192.168.1.197:8443`     | GitOps dashboard - get password: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"`   |
+| Grafana  | `http://192.168.1.197:3001`     | Monitoring dashboards - password: `DevOps2026!`                                                                              |
+
+### Verify Deployment
+
+```bash
+# SSH to server
+ssh v1nh2oz4@192.168.1.197
+
+# Check all pods are running
+kubectl get pods -n blog-app
+
+# Check ArgoCD sync status
+kubectl get applications -n argocd
+
+# Test APIs
+curl http://localhost:8080/api/blogs           # Should return []
+curl http://localhost:8080/api/categories      # Should return []
+curl -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"sonndt2","password":"123456"}'  # Should return JWT token
+```
 
 ## Project Structure
 
@@ -261,11 +295,47 @@ flowchart LR
 
 ## Troubleshooting
 
+### Current Deployment Status ✅
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **k3d Cluster** | ✅ Running | 1 server + 1 agent on 192.168.1.197 |
+| **ArgoCD** | ✅ Synced | Auto-sync enabled with self-healing |
+| **Frontend** | ✅ Running | Port 8080, nginx reverse proxy |
+| **User Service** | ✅ Running | Port 8081, auth working |
+| **Blog Service** | ✅ Running | Port 8082 |
+| **File Service** | ✅ Running | Port 8083 |
+| **Databases** | ✅ Running | PostgreSQL (user, blog, file DBs) |
+| **SeaweedFS** | ✅ Running | File storage |
+| **Prometheus** | ✅ Running | Metrics collection |
+| **Grafana** | ✅ Running | Port 3001 |
+
+### API Access
+
+```
+# Frontend (serves React app + proxies API)
+http://192.168.1.197:8080
+
+# API Endpoints (via frontend nginx):
+/api/auth/*      → User Service (8081)
+/api/users/*     → User Service (8081)
+/api/blogs/*     → Blog Service (8082)
+/api/categories* → Blog Service (8082)
+/api/files/*     → File Service (8083)
+```
+
+### Login Credentials
+
+- **Username:** `sonndt2`
+- **Password:** `123456`
+
 | Problem                    | Solution                                                                             |
 | -------------------------- | ------------------------------------------------------------------------------------ |
 | `ImagePullBackOff`         | Check GitLab registry secret: `kubectl get secret gitlab-registry -n blog-app`       |
+| `JWT key byte array` error | Ensure JWT_SECRET is 256+ bits in `k8s/base/secrets.yaml`                          |
 | ArgoCD out of sync         | Force sync: `argocd app sync blog-app --force`                                       |
 | Pods not starting          | Check events: `kubectl get events -n blog-app --sort-by=.metadata.creationTimestamp` |
+| 502 Bad Gateway           | Check frontend nginx can resolve services: use FQDN (e.g., `user-service.blog-app.svc.cluster.local`) |
 | Database connection errors | Wait for DB pods to be ready, services will retry automatically                      |
 | ArgoCD TLS/git errors      | DNS or SSL issues - check server network configuration                               |
 
