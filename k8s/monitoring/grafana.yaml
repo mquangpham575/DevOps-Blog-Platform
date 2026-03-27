@@ -23,6 +23,13 @@ data:
         url: http://prometheus.monitoring.svc:9090
         isDefault: true
         editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-prov
+  namespace: monitoring
+data:
   dashboards.yaml: |
     apiVersion: 1
     providers:
@@ -35,7 +42,6 @@ data:
         allowUiUpdates: true
         options:
           path: /var/lib/grafana/dashboards
-          foldersFromFilesStructure: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -75,8 +81,11 @@ spec:
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards
               readOnly: true
-            - name: provisioning
-              mountPath: /etc/grafana/provisioning
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+            - name: dashboard-prov
+              mountPath: /etc/grafana/provisioning/dashboards
               readOnly: true
           resources:
             requests:
@@ -92,9 +101,12 @@ spec:
         - name: dashboards
           configMap:
             name: grafana-dashboards
-        - name: provisioning
+        - name: datasources
           configMap:
             name: grafana-provisioning
+        - name: dashboard-prov
+          configMap:
+            name: grafana-dashboard-prov
 ---
 apiVersion: v1
 kind: Service
