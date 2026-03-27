@@ -124,6 +124,7 @@ spec:
       labels:
         app: prometheus
     spec:
+      dnsPolicy: ClusterFirst
       containers:
         - name: prometheus
           image: prom/prometheus:v2.51.0
