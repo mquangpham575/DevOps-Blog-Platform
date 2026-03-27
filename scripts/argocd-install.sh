@@ -6,8 +6,15 @@ set -euo pipefail
 
 echo "=== Installing ArgoCD ==="
 
-# Create namespace and install
-kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+# Install ArgoCD CLI
+echo "Installing ArgoCD CLI..."
+curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/stable/argocd-linux-amd64
+chmod +x /usr/local/bin/argocd
+
+# Create namespace first
+kubectl create namespace argocd || true
+
+# Install ArgoCD
 kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
 # Wait for ArgoCD to be ready
@@ -46,11 +53,6 @@ echo "     argocd repo add https://gitlab.com/mquangpham575/DevOps.git \\"
 echo "       --username <gitlab-user> \\"
 echo "       --password <personal-access-token>"
 echo ""
-echo "  2. Apply ArgoCD applications:"
-echo "     kubectl apply -f argocd/project.yaml"
-echo "     kubectl apply -f argocd/blog-app.yaml"
-echo "     kubectl apply -f argocd/monitoring.yaml"
-echo ""
-echo "  3. Watch the sync:"
-echo "     argocd app list"
-echo "     argocd app get blog-app"
+echo "  2. Or use kubectl to check applications:"
+echo "     kubectl get application -n argocd"
+echo "     kubectl get application blog-app -n argocd"
