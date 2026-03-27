@@ -1,121 +1,6 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboards
-  namespace: monitoring
-  labels:
-    grafana_dashboard: "1"
-data:
-  spring-services.json: |
-    {
-      "title": "Spring Services Monitoring",
-      "uid": "spring-services",
-      "tags": ["spring", "prometheus"],
-      "timezone": "browser",
-      "schemaVersion": 38,
-      "version": 1,
-      "refresh": "10s",
-      "panels": [
-        {
-          "id": 1,
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-          "type": "stat",
-          "title": "Service Status",
-          "targets": [
-            {
-              "expr": "up",
-              "legendFormat": "{{job}}",
-              "refId": "A",
-              "datasource": {"type": "prometheus", "uid": "prometheus"}
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "mappings": [
-                {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}}},
-                {"type": "value", "options": {"1": {"text": "UP", "color": "green"}}}
-              ],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {"value": null, "color": "red"},
-                  {"value": 1, "color": "green"}
-                ]
-              }
-            }
-          },
-          "options": {
-            "colorMode": "background",
-            "graphMode": "none",
-            "orientation": "auto"
-          }
-        },
-        {
-          "id": 2,
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-          "type": "timeseries",
-          "title": "Request Rate (req/s)",
-          "targets": [
-            {
-              "expr": "rate(http_server_requests_seconds_count[5m])",
-              "legendFormat": "{{job}}",
-              "refId": "A",
-              "datasource": {"type": "prometheus", "uid": "prometheus"}
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "reqps",
-              "custom": {"drawStyle": "line", "lineWidth": 2}
-            }
-          }
-        },
-        {
-          "id": 3,
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-          "type": "timeseries",
-          "title": "Response Time p95 (ms)",
-          "targets": [
-            {
-              "expr": "1000 * histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))",
-              "legendFormat": "{{job}}",
-              "refId": "A",
-              "datasource": {"type": "prometheus", "uid": "prometheus"}
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "ms",
-              "custom": {"drawStyle": "line", "lineWidth": 2}
-            }
-          }
-        },
-        {
-          "id": 4,
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
-          "type": "timeseries",
-          "title": "JVM Heap Memory (bytes)",
-          "targets": [
-            {
-              "expr": "jvm_memory_used_bytes{area=\"heap\"}",
-              "legendFormat": "{{job}}",
-              "refId": "A",
-              "datasource": {"type": "prometheus", "uid": "prometheus"}
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "custom": {"drawStyle": "line", "lineWidth": 2}
-            }
-          }
-        }
-      ]
-    }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
   name: grafana-provisioning
   namespace: monitoring
 data:
@@ -130,32 +15,13 @@ data:
         editable: true
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-dashboard-prov
-  namespace: monitoring
-data:
-  dashboards.yaml: |
-    apiVersion: 1
-    providers:
-      - name: 'Kubernetes Dashboards'
-        orgId: 1
-        folder: ''
-        type: file
-        disableDeletion: false
-        updateIntervalSeconds: 10
-        allowUiUpdates: true
-        options:
-          path: /var/lib/grafana/dashboards
----
-apiVersion: v1
 kind: Secret
 metadata:
   name: grafana-secrets
   namespace: monitoring
 type: Opaque
 data:
-  GRAFANA_PASSWORD: YWRtaW4xMjM=  # admin123
+  GRAFANA_PASSWORD: YWRtaW4xMjM=
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -190,14 +56,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/grafana
-            - name: dashboards
-              mountPath: /var/lib/grafana/dashboards
-              readOnly: true
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
-              readOnly: true
-            - name: dashboard-prov
-              mountPath: /etc/grafana/provisioning/dashboards
               readOnly: true
           resources:
             requests:
@@ -210,15 +70,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: grafana-pvc
-        - name: dashboards
-          configMap:
-            name: grafana-dashboards
         - name: datasources
           configMap:
             name: grafana-provisioning
-        - name: dashboard-prov
-          configMap:
-            name: grafana-dashboard-prov
 ---
 apiVersion: v1
 kind: Service
