@@ -37,6 +37,7 @@ resources:
 
   # Frontend
   - frontend/deployment.yaml
+  - frontend/configmap.yaml
   - frontend/service.yaml
 
 labels:

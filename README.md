@@ -79,11 +79,38 @@ graph TB
 
 ### Prerequisites
 
-- Docker Desktop (4GB+ memory)
+- Docker Desktop (4GB+ memory) - for local development
+- OR a server (VM/physical) with Docker - for remote deployment
 - `k3d`, `kubectl` CLI tools
 - GitLab account with Personal Access Token
 
-### Setup
+### Option 1: Remote Server Setup (Recommended for production)
+
+**Server IP:** `192.168.1.197`
+
+```bash
+# SSH to server
+ssh v1nh2oz4@192.168.1.197
+
+# 1. Create cluster and install ArgoCD
+bash scripts/k3d-setup.sh
+bash scripts/argocd-install.sh
+
+# 2. Create GitLab registry secret
+kubectl create secret docker-registry gitlab-registry \
+  --namespace blog-app \
+  --docker-server=registry.gitlab.com \
+  --docker-username=YOUR_GITLAB_USER \
+  --docker-password=YOUR_GITLAB_PAT \
+  --docker-email=YOUR_EMAIL
+
+# 3. Deploy applications
+kubectl apply -f argocd/project.yaml
+kubectl apply -f argocd/blog-app.yaml
+kubectl apply -f argocd/monitoring.yaml
+```
+
+### Option 2: Local Development
 
 ```bash
 # 1. Create cluster and install ArgoCD
@@ -107,16 +134,23 @@ kubectl apply -f argocd/monitoring.yaml
 Add to your hosts file (`/etc/hosts` or `C:\Windows\System32\drivers\etc\hosts`):
 
 ```
-127.0.0.1 argocd.local
+# For local development
+127.0.0.1 argocd.local blog.local
+
+# For remote server access (add server IP)
+192.168.1.197 argocd.local blog.local
 ```
 
 ### Access
 
-| Service  | URL                         | Notes                                                                                                                |
-| -------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| ArgoCD   | `https://argocd.local:8443` | Get password: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" \| base64 -d` |
-| Frontend | `http://localhost:3000`     | `kubectl port-forward -n blog-app svc/frontend 3000:80`                                                              |
-| Grafana  | `http://localhost:3001`     | `kubectl port-forward -n monitoring svc/grafana 3001:3000`                                                           |
+| Service  | URL                                    | Notes                                                                                                                        |
+| -------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| ArgoCD   | `https://argocd.local:8443` (local)   | Get password: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" \| base64 -d`           |
+|          | `https://argocd.local:8080` (remote)  | Server: `192.168.1.197` - Add `192.168.1.197 argocd.local` to hosts file                                                   |
+| Frontend | `http://localhost:3000` (local)        | `kubectl port-forward -n blog-app svc/frontend 3000:80`                                                                     |
+|          | `http://192.168.1.197:8080` (remote)   | Direct access on server network                                                                                             |
+| Grafana  | `http://localhost:3001` (local)        | `kubectl port-forward -n monitoring svc/grafana 3001:3000`                                                                  |
+|          | `http://192.168.1.197:3001` (remote)  | Direct access on server network                                                                                             |
 
 ## Project Structure
 
@@ -233,6 +267,20 @@ flowchart LR
 | ArgoCD out of sync         | Force sync: `argocd app sync blog-app --force`                                       |
 | Pods not starting          | Check events: `kubectl get events -n blog-app --sort-by=.metadata.creationTimestamp` |
 | Database connection errors | Wait for DB pods to be ready, services will retry automatically                      |
+| ArgoCD TLS/git errors      | DNS or SSL issues - check server network configuration                               |
+
+### Server Access Issues
+
+If accessing from remote server:
+
+```bash
+# Check if ports are accessible
+curl http://192.168.1.197:8080
+
+# Check ingress is working
+kubectl get ingress -n blog-app
+kubectl describe ingress -n blog-app
+```
 
 ### Useful Commands
 
@@ -264,4 +312,6 @@ k3d cluster delete blog-dev
 |              |                    |
 | ------------ | ------------------ |
 | Course       | NT548.Q21 - DevOps |
-| Last Updated | 2026-03-25         |
+| Last Updated | 2026-03-27         |
+| Deployment   | Remote Server (192.168.1.197) |
+| Orchestrator | k3d on Ubuntu 22.04 |

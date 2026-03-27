@@ -19,11 +19,18 @@ spec:
     spec:
       imagePullSecrets:
         - name: gitlab-registry
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: frontend-nginx-conf
       containers:
         - name: frontend
           image: registry.gitlab.com/mquangpham575/devops/frontend:latest
           ports:
             - containerPort: 80
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
           readinessProbe:
             httpGet:
               path: /
