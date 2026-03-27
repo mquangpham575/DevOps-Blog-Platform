@@ -1,41 +1,56 @@
 # ArgoCD Configuration
 
-## ⚠️ Important: Secrets Setup
+This folder contains ArgoCD resources used by the platform.
 
-The files in this directory contain **secret templates** that must be configured locally.
+## Files
 
-### How to Set Up Secrets
+- `project.yaml`: ArgoCD AppProject (`blog-platform`)
+- `blog-app.yaml`: ArgoCD Application for `k8s/overlays/dev` to namespace `blog-app`
+- `monitoring.yaml`: ArgoCD Application for `k8s/monitoring` to namespace `monitoring`
+- `ingress.yaml`: Ingress for ArgoCD server at `argocd.local`
+- `gitlab-repo-secret.yaml.template`: template for Git repository credential secret
 
-1. **Copy the template:**
+## Setup
 
-   ```bash
-   cp gitlab-repo-secret.yaml.template gitlab-repo-secret.yaml
-   ```
+1. Install ArgoCD in cluster:
 
-2. **Edit the file and replace placeholders:**
+```bash
+bash scripts/argocd-install.sh
+```
 
-   ```bash
-   # Replace <YOUR_GITLAB_PAT_TOKEN> with the actual PAT from infor.md
-   ```
+2. Create repo secret from template:
 
-3. **Apply to cluster:**
-   ```bash
-   kubectl apply -f argocd/gitlab-repo-secret.yaml
-   ```
+```bash
+cp argocd/gitlab-repo-secret.yaml.template argocd/gitlab-repo-secret.yaml
+```
 
-### ⚠️ NEVER COMMIT SECRETS!
+3. Fill in credentials in `argocd/gitlab-repo-secret.yaml`:
 
-- ❌ `gitlab-repo-secret.yaml` (contains actual credentials) - **IGNORED by Git**
-- ✅ `gitlab-repo-secret.yaml.template` (safe to commit) - **Template only**
+- Replace `<YOUR_GITLAB_PAT_TOKEN>` with your GitLab PAT.
+- Keep the repo URL and username aligned with your repository.
 
-The `.gitignore` file prevents accidental commits of secret files.
+4. Apply secret and applications:
 
-### Where to Get Credentials
+```bash
+kubectl apply -f argocd/gitlab-repo-secret.yaml
+kubectl apply -f argocd/project.yaml
+kubectl apply -f argocd/blog-app.yaml
+kubectl apply -f argocd/monitoring.yaml
+```
 
-Check the `infor.md` file (also gitignored) for:
+## Access
 
-- GitLab Personal Access Token (PAT)
-- GitLab username
-- Other sensitive credentials
+- ArgoCD URL: `https://argocd.local:8443`
+- Host entry (local): `127.0.0.1 argocd.local`
 
-**Note:** If you don't have `infor.md`, ask the project owner for credentials.
+Get initial admin password:
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
+
+## Secret Safety
+
+- Do not commit `argocd/gitlab-repo-secret.yaml`.
+- Commit only `argocd/gitlab-repo-secret.yaml.template`.
+- `.gitignore` already excludes local secret files.

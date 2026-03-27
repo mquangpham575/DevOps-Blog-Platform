@@ -31,7 +31,7 @@ metadata:
   labels:
     app: grafana
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: Recreate
   selector:

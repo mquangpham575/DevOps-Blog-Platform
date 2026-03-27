@@ -1,336 +1,245 @@
 # Blog Platform
 
-A microservices-based blog application built for the NT548.Q21 DevOps course. The project demonstrates GitOps deployment, CI/CD pipelines, container orchestration, and monitoring practices.
+Microservices-based blog application for NT548.Q21 DevOps coursework.
 
 ## Overview
 
-**Technology Stack:**
-
-| Component         | Technology                          | Purpose                                           |
-| ----------------- | ----------------------------------- | ------------------------------------------------- |
-| **Frontend**      | React + Vite + Tailwind CSS + NGINX | Modern SPA with responsive UI                     |
-| **Backend**       | Spring Boot (Java 17) + PostgreSQL  | Microservices with individual databases           |
-| **Storage**       | SeaweedFS                           | Distributed file storage system                   |
-| **Orchestration** | Kubernetes (k3d)                    | Container orchestration with resource management  |
-| **GitOps**        | ArgoCD                              | Automated deployment with self-healing            |
-| **CI/CD**         | GitLab CI/CD                        | Security scanning, quality gates, parallel builds |
-| **Monitoring**    | Prometheus + Grafana                | Metrics collection and visualization              |
-| **Ingress**       | NGINX Ingress Controller            | TLS termination and load balancing                |
+| Component      | Technology                      | Purpose                                       |
+| -------------- | ------------------------------- | --------------------------------------------- |
+| Frontend       | React + Vite + Tailwind + NGINX | SPA UI and API reverse proxy                  |
+| Backend        | Spring Boot (Java 17)           | User, Blog, File microservices                |
+| Databases      | PostgreSQL                      | One DB per service                            |
+| Object Storage | SeaweedFS                       | File storage backend                          |
+| Orchestration  | Kubernetes (k3d)                | Local cluster runtime                         |
+| GitOps         | ArgoCD                          | Sync from Git to cluster                      |
+| CI/CD          | GitLab CI                       | Build, test, image push, manifest tag updates |
+| Monitoring     | Prometheus + Grafana            | Service metrics and dashboards                |
+| Ingress        | ingress-nginx                   | Host-based routing                            |
 
 ## Architecture
 
-**Note:** API routing is handled by nginx in the Frontend pod (not by Ingress). This provides:
+Ingress routes host traffic to the frontend service. Frontend NGINX then proxies `/api/*` paths to backend services.
 
-- Simpler architecture (no ingress controller routing issues)
-- Each service can fail independently without affecting others
-- Easier debugging (all in one nginx config)
+- `blog.local` -> ingress -> `frontend` service
+- Frontend NGINX routes:
+  - `/api/auth`, `/api/users`, `/api/follow`, `/api/notifications`, `/api/messages` -> user-service
+  - `/api/blogs`, `/api/categories`, `/api/comments`, `/api/uploads` -> blog-service
+  - `/api/files` -> file-service
 
 ```mermaid
 graph TB
-    subgraph Frontend
-        FE[React App]
-    end
+    U[Browser]
+    ING[ingress-nginx<br/>blog.local]
+    FE[Frontend NGINX + React]
 
-    subgraph Backend Services
-        US[User Service :8081]
-        BS[Blog Service :8082]
-        FS[File Service :8083]
-    end
+    US[User Service :8081]
+    BS[Blog Service :8082]
+    FS[File Service :8083]
 
-    subgraph Data
-        UDB[(User DB)]
-        BDB[(Blog DB)]
-        FDB[(File DB)]
-        SFS[SeaweedFS]
-    end
+    UDB[(user_service_db)]
+    BDB[(blog_service_db)]
+    FDB[(file_service_db)]
+    SFS[SeaweedFS]
 
-    subgraph Infrastructure
-        ING[NGINX Ingress]
-        ARG[ArgoCD]
-        PROM[Prometheus]
-        GRAF[Grafana]
-    end
-
-    FE --> ING
-    ING --> US & BS & FS
+    U --> ING --> FE
+    FE --> US
+    FE --> BS
+    FE --> FS
     US --> UDB
     BS --> BDB
-    FS --> FDB & SFS
-    ARG --> FE & US & BS & FS
-    PROM --> US & BS & FS
-    GRAF --> PROM
+    FS --> FDB
+    FS --> SFS
 ```
 
-## Service Architecture
+## Services
 
-**Service Design Principles:**
+| Service      | Internal Port | Main Responsibility                          |
+| ------------ | ------------- | -------------------------------------------- |
+| user-service | 8081          | Auth, users, follow, notifications, messages |
+| blog-service | 8082          | Blogs, categories, comments, following feed  |
+| file-service | 8083          | File APIs and SeaweedFS integration          |
+| frontend     | 80            | React static hosting + API reverse proxy     |
 
-- **Single Responsibility**: Each service owns its domain
-- **Database per Service**: Independent data management
-- **API-First**: REST APIs with comprehensive health endpoints
-- **Containerized**: Multi-stage Docker builds for optimization
+## Repository Layout
 
-### Service Mapping
+```text
+.env.example
+.gitlab-ci.yml
+README.md
+docker-compose.yml
+migration.sql
 
-| Service          | Port | Database | Responsibilities                            |
-| ---------------- | ---- | -------- | ------------------------------------------- |
-| **User Service** | 8081 | user_db  | Authentication, user management, JWT tokens |
-| **Blog Service** | 8082 | blog_db  | Posts, comments, likes, categories          |
-| **File Service** | 8083 | file_db  | File uploads, SeaweedFS integration         |
-| **Frontend**     | 3000 | -        | React SPA, API orchestration                |
+argocd/
+  README.md
+  blog-app.yaml
+  monitoring.yaml
+  project.yaml
+  ingress.yaml
+  gitlab-repo-secret.yaml.template
 
-## Quick Start
+backend/
+  user-service/
+  blog-service/
+  file-service/
 
-**⚡ Setup Time: ~5 minutes with Docker Desktop**
+frontend/
+
+k8s/
+  base/
+  overlays/dev/
+  overlays/prod/
+  monitoring/
+
+monitoring/
+  prometheus.yml
+  grafana-dashboard-spring-services.json
+
+scripts/
+  k3d-setup.sh
+  argocd-install.sh
+  remote-tools-install.sh
+```
+
+## Quick Start (Kubernetes + ArgoCD)
 
 ### Prerequisites
 
-- Docker Desktop (4GB+ memory) - for local development
-- OR a server (VM/physical) with Docker - for remote deployment
-- `k3d`, `kubectl` CLI tools
-- GitLab account with Personal Access Token
+- Docker Desktop
+- `k3d`, `kubectl`
+- Bash environment to run `scripts/*.sh`
+- GitLab PAT for ArgoCD repository access
 
-### Option 1: Remote Server Setup (Recommended for production)
-
-**Server IP:** `192.168.1.197`
+### 1) Create cluster and base prerequisites
 
 ```bash
-# SSH to server
-ssh v1nh2oz4@192.168.1.197
-
-# 1. Create cluster and install ArgoCD
 bash scripts/k3d-setup.sh
-bash scripts/argocd-install.sh
+```
 
-# 2. Create GitLab registry secret
+This script:
+
+- creates `blog-dev` k3d cluster
+- maps ingress ports `8080 -> 80` and `8443 -> 443`
+- installs ingress-nginx
+- applies `k8s/base/namespace.yaml` and `k8s/base/secrets.yaml`
+
+### 2) Install ArgoCD
+
+```bash
+bash scripts/argocd-install.sh
+```
+
+This script applies ArgoCD manifests and `argocd/ingress.yaml`.
+
+### 3) Configure ArgoCD Git repository secret
+
+```bash
+cp argocd/gitlab-repo-secret.yaml.template argocd/gitlab-repo-secret.yaml
+# edit PAT token in argocd/gitlab-repo-secret.yaml
+kubectl apply -f argocd/gitlab-repo-secret.yaml
+```
+
+### 4) Create registry pull secret
+
+```bash
 kubectl create secret docker-registry gitlab-registry \
   --namespace blog-app \
   --docker-server=registry.gitlab.com \
   --docker-username=YOUR_GITLAB_USER \
   --docker-password=YOUR_GITLAB_PAT \
   --docker-email=YOUR_EMAIL
+```
 
-# 3. Deploy applications
+### 5) Deploy ArgoCD applications
+
+```bash
 kubectl apply -f argocd/project.yaml
 kubectl apply -f argocd/blog-app.yaml
 kubectl apply -f argocd/monitoring.yaml
 ```
 
-### Option 2: Local Development
+### 6) Hosts file entries
+
+Add on your local machine:
+
+```text
+127.0.0.1 blog.local argocd.local grafana.local prometheus.local
+```
+
+## Access URLs
+
+| Service       | URL                            |
+| ------------- | ------------------------------ |
+| Blog Frontend | `http://blog.local:8080`       |
+| ArgoCD        | `https://argocd.local:8443`    |
+| Grafana       | `http://grafana.local:8080`    |
+| Prometheus    | `http://prometheus.local:8080` |
+
+Notes:
+
+- ArgoCD ingress enforces SSL redirect.
+- Monitoring routes are exposed via ingress hostnames in `k8s/monitoring/grafana.yaml`.
+
+## Local Development (Docker Compose)
 
 ```bash
-# 1. Create cluster and install ArgoCD
-bash scripts/k3d-setup.sh
-bash scripts/argocd-install.sh
-
-# 2. Create GitLab registry secret
-kubectl create secret docker-registry gitlab-registry \
-  --namespace blog-app \
-  --docker-server=registry.gitlab.com \
-  --docker-username=YOUR_GITLAB_USER \
-  --docker-password=YOUR_GITLAB_PAT \
-  --docker-email=YOUR_EMAIL
-
-# 3. Deploy applications
-kubectl apply -f argocd/project.yaml
-kubectl apply -f argocd/blog-app.yaml
-kubectl apply -f argocd/monitoring.yaml
+docker compose up -d
 ```
 
-Add to your hosts file (`/etc/hosts` or `C:\Windows\System32\drivers\etc\hosts`):
+Compose-exposed endpoints:
 
-```
-# For local development
-127.0.0.1 argocd.local blog.local grafana.local prometheus.local
+- Frontend: `http://localhost:5173`
+- SeaweedFS Master: `http://localhost:9333`
+- SeaweedFS Filer: `http://localhost:8889`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001`
 
-# For remote server access (add server IP)
-192.168.1.197 argocd.local blog.local grafana.local prometheus.local
-```
+Backend APIs in compose are reachable through frontend proxy, not direct host ports.
 
-### Access
+## GitLab CI/CD Behavior
 
-| Service    | URL                         | Notes                                                                                                                      |
-| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Frontend   | `http://blog.local:8080`    | Main entry point - React app + API reverse proxy - add `192.168.1.197 blog.local` to hosts file                             |
-| ArgoCD     | `http://argocd.local:8080`  | GitOps dashboard - get password: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"` - add `192.168.1.197 argocd.local` to hosts file |
-| Grafana    | `http://grafana.local:8080` | Monitoring dashboards - password: `DevOps2026!` - add `192.168.1.197 grafana.local` to hosts file                          |
-| Prometheus | `http://prometheus.local:8080` | Metrics collection - add `192.168.1.197 prometheus.local` to hosts file                                            |
+Current `.gitlab-ci.yml` pipeline stages:
 
-### Verify Deployment
+1. validate
+2. build
+3. test
+4. docker-build
+5. scan
+6. deploy
+
+Current behavior:
+
+- Builds/tests run per-service only when that service path changes.
+- Docker images are pushed on `main` for changed services.
+- Deploy jobs update image tags in `k8s/base/kustomization.yaml` and push back to `main`.
+- Trivy scan currently runs in report mode (`--exit-code 0`) and does not fail pipeline by severity.
+
+## Monitoring
+
+- Spring Boot services expose actuator endpoints including `/actuator/prometheus`.
+- Prometheus + Grafana are deployed from `k8s/monitoring`.
+- Grafana datasource is auto-provisioned to Prometheus.
+
+## Security Notes (Current State)
+
+- JWT-based auth is implemented in backend services.
+- Ingress, service isolation, and Kubernetes secrets are used.
+- Repository currently includes `k8s/base/secrets.yaml` for lab/demo setup. Rotate credentials for any real environment.
+- If you need stricter hardening (NetworkPolicies, restricted Pod SecurityContext, secret manager integration), add those manifests and enforcement policies.
+
+## Useful Commands
 
 ```bash
-# SSH to server
-ssh v1nh2oz4@192.168.1.197
-
-# Check all pods are running
 kubectl get pods -n blog-app
-
-# Check ArgoCD sync status
 kubectl get applications -n argocd
-
-# Test APIs
-curl http://blog.local:8080/api/blogs           # Should return []
-curl http://blog.local:8080/api/categories      # Should return []
-curl -X POST http://blog.local:8080/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"sonndt2","password":"123456"}'  # Should return JWT token
-```
-
-## Project Structure
-
-```
-backend/                    # Spring Boot microservices
-├── user-service/          # Authentication, user management
-├── blog-service/          # Posts, comments, likes
-└── file-service/          # File uploads, SeaweedFS integration
-
-frontend/                   # React SPA (Vite + Tailwind)
-
-k8s/
-├── base/                  # Base Kubernetes manifests
-├── overlays/dev/          # Dev environment overrides
-└── monitoring/            # Prometheus + Grafana
-
-argocd/                    # GitOps configuration
-├── project.yaml           # ArgoCD project
-├── blog-app.yaml          # Main app deployment
-└── monitoring.yaml        # Monitoring stack
-
-scripts/
-├── k3d-setup.sh           # Cluster setup
-└── argocd-install.sh      # ArgoCD installation
-
-.gitlab-ci.yml             # CI/CD pipeline
-```
-
-## Development
-
-### Local Development (without Kubernetes)
-
-```bash
-docker-compose up -d
-
-# Services available at:
-# Frontend:     http://localhost:5173
-# User API:     http://localhost:8081
-# Blog API:     http://localhost:8082
-# File API:     http://localhost:8083
-```
-
-### GitOps Workflow
-
-```mermaid
-flowchart LR
-    A[Push Code] --> B[GitLab CI]
-    B --> C[Build + Test]
-    C --> D[Security Scan]
-    D --> E[Build Images]
-    E --> F[Update Manifests]
-    F --> G[ArgoCD Sync]
-    G --> H[Deploy]
-```
-
-1. Push code to GitLab
-2. CI pipeline builds, tests, and scans for vulnerabilities
-3. On success, pipeline updates image tags in `k8s/base/kustomization.yaml`
-4. ArgoCD detects changes and deploys automatically
-
-## Key Features
-
-### CI/CD Pipeline
-
-- Multi-stage builds with caching
-- Trivy vulnerability scanning (blocks HIGH/CRITICAL)
-- Automatic image tagging and manifest updates
-- Parallel job execution
-
-### Security
-
-**Security Scanning Pipeline:**
-
-```mermaid
-flowchart LR
-    A[Code Push] --> B[Build & Test]
-    B --> C[Trivy Scan]
-    C -->|HIGH/CRITICAL| D[❌ Block Deploy]
-    C -->|PASS| E[✅ Deploy]
-
-    style D fill:#ffebee
-    style E fill:#e8f5e8
-```
-
-**Security Controls:**
-
-- 🔒 **Vulnerability Scanning**: Trivy blocks HIGH/CRITICAL vulnerabilities
-- 🛡️ **Pod Security Standards**: Restricted mode with non-root containers
-- 🔐 **Network Policies**: Service isolation at network level
-- 🔑 **Secrets Management**: Kubernetes secrets, never in Git
-- 📊 **Audit Trail**: Complete deployment history via Git + ArgoCD
-
-### Monitoring & Observability
-
-**Metrics Collection:**
-
-- **Application Metrics**: Spring Boot Actuator via `/actuator/metrics`
-- **Health Endpoints**: `/actuator/health` (liveness/readiness probes)
-- **JVM Monitoring**: Memory, GC, threads via Micrometer
-- **Custom Metrics**: API response times, error rates, business metrics
-
-**Available Dashboards:**
-
-- Application Overview (service health, request rates)
-- JVM Performance (heap usage, GC performance)
-- Database Monitoring (connection pools, query performance)
-- Kubernetes Resources (pod status, resource utilization)
-
-### API Access
-
-```
-# Frontend (serves React app and proxies API)
-http://blog.local:8080
-
-# API Endpoints (via frontend nginx):
-/api/auth/*      → User Service (8081)
-/api/users/*     → User Service (8081)
-/api/blogs/*     → Blog Service (8082)
-/api/categories* → Blog Service (8082)
-/api/files/*     → File Service (8083)
-```
-# Frontend (serves React app + proxies API)
-http://192.168.1.197:8080
-
-# API Endpoints (via frontend nginx):
-/api/auth/*      → User Service (8081)
-/api/users/*     → User Service (8081)
-/api/blogs/*     → Blog Service (8082)
-/api/categories* → Blog Service (8082)
-/api/files/*     → File Service (8083)
-```
-
-### Useful Commands
-
-```bash
-# Check pod status
-kubectl get pods -n blog-app
-
-# View logs
 kubectl logs -n blog-app deployment/user-service -f
-
-# Check ArgoCD apps
-kubectl get applications -n argocd
-
-# Force restart
 kubectl rollout restart deployment/user-service -n blog-app
-
-# Delete cluster
 k3d cluster delete blog-dev
 ```
 
 ## Project Info
 
-|              |                               |
-| ------------ | ----------------------------- |
-| Course       | NT548.Q21 - DevOps            |
-| Last Updated | 2026-03-27                    |
-| Deployment   | Remote Server (192.168.1.197) |
-| Orchestrator | k3d on Ubuntu 22.04           |
+| Field          | Value              |
+| -------------- | ------------------ |
+| Course         | NT548.Q21 - DevOps |
+| Last Updated   | 2026-03-27         |
+| Default Branch | `main`             |
