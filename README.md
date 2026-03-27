@@ -19,19 +19,8 @@ A microservices-based blog application built for the NT548.Q21 DevOps course. Th
 
 ## Architecture
 
-### Traffic Flow
-
-```
-User → k3d Load Balancer (port 8080) → Frontend Pod (nginx)
-                                                  ↓
-                                    ┌─────────────┼─────────────┐
-                                    ↓             ↓             ↓
-                              User Service   Blog Service   File Service
-                                    ↓             ↓             ↓
-                                user-db      blog-db       file-db
-```
-
 **Note:** API routing is handled by nginx in the Frontend pod (not by Ingress). This provides:
+
 - Simpler architecture (no ingress controller routing issues)
 - Each service can fail independently without affecting others
 - Easier debugging (all in one nginx config)
@@ -152,19 +141,20 @@ Add to your hosts file (`/etc/hosts` or `C:\Windows\System32\drivers\etc\hosts`)
 
 ```
 # For local development
-127.0.0.1 argocd.local blog.local
+127.0.0.1 argocd.local blog.local grafana.local prometheus.local
 
 # For remote server access (add server IP)
-192.168.1.197 argocd.local blog.local
+192.168.1.197 argocd.local blog.local grafana.local prometheus.local
 ```
 
 ### Access
 
-| Service  | URL                             | Notes                                                                                                                        |
-| -------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Frontend | `http://192.168.1.197:8080`     | Main entry point - React app + API reverse proxy                                                                            |
-| ArgoCD   | `http://192.168.1.197:8443`     | GitOps dashboard - get password: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"`   |
-| Grafana  | `http://192.168.1.197:3001`     | Monitoring dashboards - password: `DevOps2026!`                                                                              |
+| Service    | URL                         | Notes                                                                                                                      |
+| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Frontend   | `http://blog.local:8080`    | Main entry point - React app + API reverse proxy - add `192.168.1.197 blog.local` to hosts file                             |
+| ArgoCD     | `http://argocd.local:8080`  | GitOps dashboard - get password: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"` - add `192.168.1.197 argocd.local` to hosts file |
+| Grafana    | `http://grafana.local:8080` | Monitoring dashboards - password: `DevOps2026!` - add `192.168.1.197 grafana.local` to hosts file                          |
+| Prometheus | `http://prometheus.local:8080` | Metrics collection - add `192.168.1.197 prometheus.local` to hosts file                                            |
 
 ### Verify Deployment
 
@@ -179,9 +169,9 @@ kubectl get pods -n blog-app
 kubectl get applications -n argocd
 
 # Test APIs
-curl http://localhost:8080/api/blogs           # Should return []
-curl http://localhost:8080/api/categories      # Should return []
-curl -X POST http://localhost:8080/api/auth/login \
+curl http://blog.local:8080/api/blogs           # Should return []
+curl http://blog.local:8080/api/categories      # Should return []
+curl -X POST http://blog.local:8080/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"sonndt2","password":"123456"}'  # Should return JWT token
 ```
@@ -293,25 +283,18 @@ flowchart LR
 - Database Monitoring (connection pools, query performance)
 - Kubernetes Resources (pod status, resource utilization)
 
-## Troubleshooting
-
-### Current Deployment Status ✅
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **k3d Cluster** | ✅ Running | 1 server + 1 agent on 192.168.1.197 |
-| **ArgoCD** | ✅ Synced | Auto-sync enabled with self-healing |
-| **Frontend** | ✅ Running | Port 8080, nginx reverse proxy |
-| **User Service** | ✅ Running | Port 8081, auth working |
-| **Blog Service** | ✅ Running | Port 8082 |
-| **File Service** | ✅ Running | Port 8083 |
-| **Databases** | ✅ Running | PostgreSQL (user, blog, file DBs) |
-| **SeaweedFS** | ✅ Running | File storage |
-| **Prometheus** | ✅ Running | Metrics collection |
-| **Grafana** | ✅ Running | Port 3001 |
-
 ### API Access
 
+```
+# Frontend (serves React app and proxies API)
+http://blog.local:8080
+
+# API Endpoints (via frontend nginx):
+/api/auth/*      → User Service (8081)
+/api/users/*     → User Service (8081)
+/api/blogs/*     → Blog Service (8082)
+/api/categories* → Blog Service (8082)
+/api/files/*     → File Service (8083)
 ```
 # Frontend (serves React app + proxies API)
 http://192.168.1.197:8080
@@ -323,21 +306,6 @@ http://192.168.1.197:8080
 /api/categories* → Blog Service (8082)
 /api/files/*     → File Service (8083)
 ```
-
-### Login Credentials
-
-- **Username:** `sonndt2`
-- **Password:** `123456`
-
-| Problem                    | Solution                                                                             |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| `ImagePullBackOff`         | Check GitLab registry secret: `kubectl get secret gitlab-registry -n blog-app`       |
-| `JWT key byte array` error | Ensure JWT_SECRET is 256+ bits in `k8s/base/secrets.yaml`                          |
-| ArgoCD out of sync         | Force sync: `argocd app sync blog-app --force`                                       |
-| Pods not starting          | Check events: `kubectl get events -n blog-app --sort-by=.metadata.creationTimestamp` |
-| 502 Bad Gateway           | Check frontend nginx can resolve services: use FQDN (e.g., `user-service.blog-app.svc.cluster.local`) |
-| Database connection errors | Wait for DB pods to be ready, services will retry automatically                      |
-| ArgoCD TLS/git errors      | DNS or SSL issues - check server network configuration                               |
 
 ### Useful Commands
 
@@ -358,17 +326,11 @@ kubectl rollout restart deployment/user-service -n blog-app
 k3d cluster delete blog-dev
 ```
 
-## Documentation
-
-- [Security](docs/SECURITY.md) - Security controls & compliance
-- [Backup & Recovery](docs/BACKUP_RECOVERY.md) - Disaster recovery procedures
-- [Contributing](docs/CONTRIBUTING.md) - Development guidelines
-
 ## Project Info
 
-|              |                    |
-| ------------ | ------------------ |
-| Course       | NT548.Q21 - DevOps |
-| Last Updated | 2026-03-27         |
+|              |                               |
+| ------------ | ----------------------------- |
+| Course       | NT548.Q21 - DevOps            |
+| Last Updated | 2026-03-27                    |
 | Deployment   | Remote Server (192.168.1.197) |
-| Orchestrator | k3d on Ubuntu 22.04 |
+| Orchestrator | k3d on Ubuntu 22.04           |
