@@ -339,19 +339,6 @@ http://192.168.1.197:8080
 | Database connection errors | Wait for DB pods to be ready, services will retry automatically                      |
 | ArgoCD TLS/git errors      | DNS or SSL issues - check server network configuration                               |
 
-### Server Access Issues
-
-If accessing from remote server:
-
-```bash
-# Check if ports are accessible
-curl http://192.168.1.197:8080
-
-# Check ingress is working
-kubectl get ingress -n blog-app
-kubectl describe ingress -n blog-app
-```
-
 ### Useful Commands
 
 ```bash
