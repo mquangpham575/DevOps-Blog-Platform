@@ -167,16 +167,17 @@ Add on your local machine:
 
 ## Access URLs
 
-| Service       | URL                            |
-| ------------- | ------------------------------ |
-| Blog Frontend | `http://blog.local:8080`       |
-| ArgoCD        | `https://argocd.local:8443`    |
-| Grafana       | `http://grafana.local:8080`    |
-| Prometheus    | `http://prometheus.local:8080` |
+| Service       | HTTP URL                       | HTTPS URL                       |
+| ------------- | ------------------------------ | ------------------------------- |
+| Blog Frontend | `http://blog.local:8080`       | `https://blog.local:8443`       |
+| ArgoCD        | `http://argocd.local:8080`      | `https://argocd.local:8443`     |
+| Grafana       | `http://grafana.local:8080`    | `https://grafana.local:8443`    |
+| Prometheus    | `http://prometheus.local:8080` | `https://prometheus.local:8443` |
 
 Notes:
 
-- ArgoCD ingress enforces SSL redirect.
+- All services are now accessible via both HTTP (port 8080) and HTTPS (port 8443).
+- SSL redirection is disabled to allow direct HTTP access for development.
 - Monitoring routes are exposed via ingress hostnames in `k8s/monitoring/grafana.yaml`.
 
 ## Local Development (Docker Compose)
