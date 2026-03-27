@@ -1,3 +1,143 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  service-overview.json: |
+    {
+      "title": "Service Overview",
+      "tags": ["kubernetes", "spring-boot"],
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "type": "graph",
+          "title": "Service Uptime",
+          "targets": [
+            {
+              "expr": "up{job=~\".*-service\"}",
+              "legendFormat": "{{job}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "type": "graph",
+          "title": "Request Rate (req/s)",
+          "targets": [
+            {
+              "expr": "rate(http_server_requests_seconds_count[5m])",
+              "legendFormat": "{{job}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "type": "graph",
+          "title": "Response Time (p95)",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))",
+              "legendFormat": "{{job}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "type": "graph",
+          "title": "Error Rate (%)",
+          "targets": [
+            {
+              "expr": "rate(http_server_requests_seconds_count{status=~\"5..\"}[5m]) * 100",
+              "legendFormat": "{{job}} - {{status}}"
+            }
+          ]
+        }
+      ]
+    }
+  jvm-overview.json: |
+    {
+      "title": "JVM Overview",
+      "tags": ["jvm", "memory"],
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "type": "graph",
+          "title": "JVM Memory Usage",
+          "targets": [
+            {
+              "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+              "legendFormat": "{{job}} - used"
+            },
+            {
+              "expr": "jvm_memory_max_bytes{area=\"heap\"}",
+              "legendFormat": "{{job}} - max"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "type": "graph",
+          "title": "JVM Threads",
+          "targets": [
+            {
+              "expr": "jvm_threads_live_threads",
+              "legendFormat": "{{job}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "type": "graph",
+          "title": "JVM GC Pause Time",
+          "targets": [
+            {
+              "expr": "rate(jvm_gc_pause_seconds_sum[5m])",
+              "legendFormat": "{{job}}"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: monitoring
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus.monitoring.svc:9090
+        isDefault: true
+        editable: true
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'Kubernetes Dashboards'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        options:
+          path: /var/lib/grafana/dashboards
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,9 +168,17 @@ spec:
                 secretKeyRef:
                   name: grafana-secrets
                   key: GRAFANA_PASSWORD
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: /var/lib/grafana/dashboards/service-overview.json
           volumeMounts:
             - name: data
               mountPath: /var/lib/grafana
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+              readOnly: true
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning
+              readOnly: true
           resources:
             requests:
               memory: "128Mi"
@@ -42,6 +190,12 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: grafana-pvc
+        - name: dashboards
+          configMap:
+            name: grafana-dashboards
+        - name: provisioning
+          configMap:
+            name: grafana-provisioning
 ---
 apiVersion: v1
 kind: Service
