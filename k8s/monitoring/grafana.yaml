@@ -9,54 +9,62 @@ data:
   service-overview.json: |
     {
       "title": "Service Overview",
+      "uid": "service-overview",
       "tags": ["kubernetes", "spring-boot"],
       "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "10s",
       "panels": [
         {
           "id": 1,
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-          "type": "graph",
+          "type": "timeseries",
           "title": "Service Uptime",
           "targets": [
             {
               "expr": "up{job=~\".*-service\"}",
-              "legendFormat": "{{job}}"
+              "legendFormat": "{{job}}",
+              "refId": "A"
             }
           ]
         },
         {
           "id": 2,
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-          "type": "graph",
+          "type": "timeseries",
           "title": "Request Rate (req/s)",
           "targets": [
             {
               "expr": "rate(http_server_requests_seconds_count[5m])",
-              "legendFormat": "{{job}}"
+              "legendFormat": "{{job}}",
+              "refId": "A"
             }
           ]
         },
         {
           "id": 3,
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-          "type": "graph",
+          "type": "timeseries",
           "title": "Response Time (p95)",
           "targets": [
             {
               "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))",
-              "legendFormat": "{{job}}"
+              "legendFormat": "{{job}}",
+              "refId": "A"
             }
           ]
         },
         {
           "id": 4,
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
-          "type": "graph",
+          "type": "timeseries",
           "title": "Error Rate (%)",
           "targets": [
             {
               "expr": "rate(http_server_requests_seconds_count{status=~\"5..\"}[5m]) * 100",
-              "legendFormat": "{{job}} - {{status}}"
+              "legendFormat": "{{job}} - {{status}}",
+              "refId": "A"
             }
           ]
         }
@@ -65,46 +73,54 @@ data:
   jvm-overview.json: |
     {
       "title": "JVM Overview",
+      "uid": "jvm-overview",
       "tags": ["jvm", "memory"],
       "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "10s",
       "panels": [
         {
           "id": 1,
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-          "type": "graph",
+          "type": "timeseries",
           "title": "JVM Memory Usage",
           "targets": [
             {
               "expr": "jvm_memory_used_bytes{area=\"heap\"}",
-              "legendFormat": "{{job}} - used"
+              "legendFormat": "{{job}} - used",
+              "refId": "A"
             },
             {
               "expr": "jvm_memory_max_bytes{area=\"heap\"}",
-              "legendFormat": "{{job}} - max"
+              "legendFormat": "{{job}} - max",
+              "refId": "B"
             }
           ]
         },
         {
           "id": 2,
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-          "type": "graph",
+          "type": "timeseries",
           "title": "JVM Threads",
           "targets": [
             {
               "expr": "jvm_threads_live_threads",
-              "legendFormat": "{{job}}"
+              "legendFormat": "{{job}}",
+              "refId": "A"
             }
           ]
         },
         {
           "id": 3,
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-          "type": "graph",
+          "type": "timeseries",
           "title": "JVM GC Pause Time",
           "targets": [
             {
               "expr": "rate(jvm_gc_pause_seconds_sum[5m])",
-              "legendFormat": "{{job}}"
+              "legendFormat": "{{job}}",
+              "refId": "A"
             }
           ]
         }
@@ -135,8 +151,10 @@ data:
         type: file
         disableDeletion: false
         updateIntervalSeconds: 10
+        allowUiUpdates: true
         options:
           path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: true
 ---
 apiVersion: apps/v1
 kind: Deployment
