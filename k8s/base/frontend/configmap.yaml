@@ -12,8 +12,9 @@ data:
         index index.html;
         client_max_body_size 50M;
         charset utf-8;
-        resolver 10.43.0.10 ipv6=off valid=30s;
+        resolver 10.96.0.10 ipv6=off valid=30s;
         resolver_timeout 5s;
+
 
         location / {
             try_files $uri $uri/ /index.html;
