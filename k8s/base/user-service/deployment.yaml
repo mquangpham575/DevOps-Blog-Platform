@@ -19,6 +19,10 @@ spec:
     spec:
       imagePullSecrets:
         - name: gitlab-registry
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
       containers:
         - name: user-service
           image: registry.gitlab.com/mquangpham575/devops/user-service:latest

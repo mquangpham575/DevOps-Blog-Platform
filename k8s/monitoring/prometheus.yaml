@@ -26,17 +26,17 @@ data:
       - job_name: 'user-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
-          - targets: ['10.42.0.100:8081']
+          - targets: ['user-service.blog-app.svc:8081']
 
       - job_name: 'blog-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
-          - targets: ['10.42.1.91:8082']
+          - targets: ['blog-service.blog-app.svc:8082']
 
       - job_name: 'file-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
-          - targets: ['10.42.1.87:8083']
+          - targets: ['file-service.blog-app.svc:8083']
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -125,6 +125,11 @@ spec:
         app: prometheus
     spec:
       dnsPolicy: ClusterFirst
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+# Same user, group as in Dockerfile
+
       containers:
         - name: prometheus
           image: prom/prometheus:v2.51.0
@@ -174,10 +179,11 @@ metadata:
   labels:
     app: prometheus
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
     - port: 9090
       targetPort: 9090
+      nodePort: 30090
   selector:
     app: prometheus
 ---
