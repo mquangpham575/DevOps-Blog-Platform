@@ -40,6 +40,16 @@ validate-pipeline:
     - changes:
         - frontend/**/*
 
+.customer-service-changes:
+  rules:
+    - changes:
+        - backend/customer-service/**/*
+
+.interaction-service-changes:
+  rules:
+    - changes:
+        - backend/interaction-service/**/*
+
 .user-service-main-changes:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
@@ -63,6 +73,18 @@ validate-pipeline:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - frontend/**/*
+
+.customer-service-main-changes:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/customer-service/**/*
+
+.interaction-service-main-changes:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/interaction-service/**/*
 
 variables:
   DOCKER_DRIVER: overlay2
@@ -130,6 +152,18 @@ build-file-service:
   variables:
     SERVICE_DIR: "backend/file-service"
 
+build-customer-service:
+  <<: *backend_build_def
+  extends: .customer-service-changes
+  variables:
+    SERVICE_DIR: "backend/customer-service"
+
+build-interaction-service:
+  <<: *backend_build_def
+  extends: .interaction-service-changes
+  variables:
+    SERVICE_DIR: "backend/interaction-service"
+
 build-frontend:
   image: node:20-alpine
   stage: build
@@ -173,6 +207,22 @@ test-file-service:
   dependencies:
     - build-file-service
 
+test-customer-service:
+  <<: *backend_test_def
+  extends: .customer-service-changes
+  variables:
+    SERVICE_DIR: "backend/customer-service"
+  dependencies:
+    - build-customer-service
+
+test-interaction-service:
+  <<: *backend_test_def
+  extends: .interaction-service-changes
+  variables:
+    SERVICE_DIR: "backend/interaction-service"
+  dependencies:
+    - build-interaction-service
+
 test-frontend:
   image: node:20-alpine
   stage: test
@@ -211,6 +261,24 @@ docker-file-service:
     IMAGE_NAME: "file-service"
   dependencies:
     - build-file-service
+
+docker-customer-service:
+  <<: *docker_build_def
+  extends: .customer-service-main-changes
+  variables:
+    SERVICE_DIR: "backend/customer-service"
+    IMAGE_NAME: "customer-service"
+  dependencies:
+    - build-customer-service
+
+docker-interaction-service:
+  <<: *docker_build_def
+  extends: .interaction-service-main-changes
+  variables:
+    SERVICE_DIR: "backend/interaction-service"
+    IMAGE_NAME: "interaction-service"
+  dependencies:
+    - build-interaction-service
 
 docker-frontend:
   <<: *docker_build_def
@@ -267,6 +335,7 @@ deploy-blog-service:
       optional: true
 
 deploy-file-service:
+  <<: *deploy_template
   extends:
     - .deploy_template
     - .file-service-main-changes
@@ -275,6 +344,30 @@ deploy-file-service:
   needs:
     - test-file-service
     - docker-file-service
+    - job: container-scan
+      optional: true
+
+deploy-customer-service:
+  extends:
+    - .deploy_template
+    - .customer-service-main-changes
+  variables:
+    SERVICE_NAME: "customer-service"
+  needs:
+    - test-customer-service
+    - docker-customer-service
+    - job: container-scan
+      optional: true
+
+deploy-interaction-service:
+  extends:
+    - .deploy_template
+    - .interaction-service-main-changes
+  variables:
+    SERVICE_NAME: "interaction-service"
+  needs:
+    - test-interaction-service
+    - docker-interaction-service
     - job: container-scan
       optional: true
 
@@ -302,6 +395,8 @@ container-scan:
         - backend/user-service/**/*
         - backend/blog-service/**/*
         - backend/file-service/**/*
+        - backend/customer-service/**/*
+        - backend/interaction-service/**/*
         - frontend/**/*
   needs:
     - job: docker-user-service
@@ -310,12 +405,18 @@ container-scan:
       optional: true
     - job: docker-file-service
       optional: true
+    - job: docker-customer-service
+      optional: true
+    - job: docker-interaction-service
+      optional: true
     - job: docker-frontend
       optional: true
   script:
     - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA || true
     - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA || true
     - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA || true
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA || true
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA || true
     - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA || true
     - echo "Scan finished for version $CI_COMMIT_SHORT_SHA. Review results above."
   allow_failure: true

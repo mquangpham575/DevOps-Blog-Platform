@@ -18,6 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -53,6 +54,6 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum Role {
-        USER, ADMIN, EDITOR
+        USER, ADMIN, EDITOR, SUPPORT
     }
 }

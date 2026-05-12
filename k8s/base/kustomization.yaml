@@ -33,6 +33,10 @@ resources:
   - blog-service/service.yaml
   - file-service/deployment.yaml
   - file-service/service.yaml
+  - customer-service/deployment.yaml
+  - customer-service/service.yaml
+  - interaction-service/deployment.yaml
+  - interaction-service/service.yaml
 
   # Frontend
   - frontend/deployment.yaml
@@ -53,4 +57,8 @@ images:
   - name: registry.gitlab.com/mquangpham575/devops/file-service
     newTag: latest
   - name: registry.gitlab.com/mquangpham575/devops/frontend
+    newTag: latest
+  - name: registry.gitlab.com/mquangpham575/devops/customer-service
+    newTag: latest
+  - name: registry.gitlab.com/mquangpham575/devops/interaction-service
     newTag: latest
