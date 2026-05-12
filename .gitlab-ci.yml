@@ -335,7 +335,6 @@ deploy-blog-service:
       optional: true
 
 deploy-file-service:
-  <<: *deploy_template
   extends:
     - .deploy_template
     - .file-service-main-changes
