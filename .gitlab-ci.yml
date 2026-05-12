@@ -86,10 +86,9 @@ cache:
     - name: docker:24.0.5-dind
       alias: docker
   variables:
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_TLS_VERIFY: 1
-    DOCKER_CERT_PATH: "/certs/client"
+    # Disable TLS to resolve "device or resource busy" and "timeout" issues on self-hosted runners
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
@@ -211,6 +210,7 @@ docker-user-service:
     SERVICE_DIR: "backend/user-service"
     IMAGE_NAME: "user-service"
   needs: ["build-user-service"]
+  dependencies: ["build-user-service"]
 
 docker-blog-service:
   <<: *docker_build_def
@@ -219,6 +219,7 @@ docker-blog-service:
     SERVICE_DIR: "backend/blog-service"
     IMAGE_NAME: "blog-service"
   needs: ["build-blog-service"]
+  dependencies: ["build-blog-service"]
 
 docker-file-service:
   <<: *docker_build_def
@@ -227,6 +228,7 @@ docker-file-service:
     SERVICE_DIR: "backend/file-service"
     IMAGE_NAME: "file-service"
   needs: ["build-file-service"]
+  dependencies: ["build-file-service"]
 
 docker-customer-service:
   <<: *docker_build_def
@@ -235,6 +237,7 @@ docker-customer-service:
     SERVICE_DIR: "backend/customer-service"
     IMAGE_NAME: "customer-service"
   needs: ["build-customer-service"]
+  dependencies: ["build-customer-service"]
 
 docker-interaction-service:
   <<: *docker_build_def
@@ -243,6 +246,7 @@ docker-interaction-service:
     SERVICE_DIR: "backend/interaction-service"
     IMAGE_NAME: "interaction-service"
   needs: ["build-interaction-service"]
+  dependencies: ["build-interaction-service"]
 
 docker-frontend:
   <<: *docker_build_def
@@ -251,6 +255,7 @@ docker-frontend:
     SERVICE_DIR: "frontend"
     IMAGE_NAME: "frontend"
   needs: ["build-frontend"]
+  dependencies: ["build-frontend"]
 
 # --- Deploy Stage Template (ArgoCD / GitOps Sync) ---
 .deploy_template:
