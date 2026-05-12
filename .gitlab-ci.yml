@@ -275,7 +275,7 @@ docker-frontend:
     - git config --global user.name "Gitlab CI"
     - git config --global user.email "ci@gitlab.com"
     - git remote set-url origin https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
-    - # Install kustomize
+    # Install kustomize
     - apk add --no-cache curl
     - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
     - mv kustomize /usr/local/bin/
