@@ -109,7 +109,7 @@ cache:
 
 # --- Templates (DRY Principle) ---
 .backend_build_template: &backend_build_def
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/maven:3.9.6-eclipse-temurin-17
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}maven:3.9.6-eclipse-temurin-17
   stage: build
   script:
     - cd $SERVICE_DIR
@@ -121,14 +121,14 @@ cache:
     expire_in: 1 day
 
 .backend_test_template: &backend_test_def
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/maven:3.9.6-eclipse-temurin-17
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}maven:3.9.6-eclipse-temurin-17
   stage: test
   script:
     - cd $SERVICE_DIR
     - mvn test -Dmaven.main.skip=true
 
 .docker_build_template: &docker_build_def
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:24.0.5
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}docker:24.0.5
   stage: docker-build
   services:
     - name: docker:24.0.5-dind
@@ -177,7 +177,7 @@ build-interaction-service:
     SERVICE_DIR: "backend/interaction-service"
 
 build-frontend:
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/node:20-alpine
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}node:20-alpine
   stage: build
   extends: .frontend-changes
   # Frontend uses its own cache to avoid overwriting/conflicting with Java cache
@@ -236,7 +236,7 @@ test-interaction-service:
     - build-interaction-service
 
 test-frontend:
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/node:20-alpine
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}node:20-alpine
   stage: test
   extends: .frontend-changes
   script:
@@ -398,7 +398,7 @@ deploy-frontend:
 container-scan:
   stage: scan
   image:
-    name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/aquasec/trivy:0.69.3
+    name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}aquasec/trivy:0.69.3
     entrypoint: [""]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
