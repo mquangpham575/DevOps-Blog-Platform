@@ -22,31 +22,37 @@ validate-pipeline:
 # --- Change Detection Templates ---
 .user-service-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - changes:
         - backend/user-service/**/*
 
 .blog-service-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - changes:
         - backend/blog-service/**/*
 
 .file-service-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - changes:
         - backend/file-service/**/*
 
 .frontend-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - changes:
         - frontend/**/*
 
 .customer-service-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - changes:
         - backend/customer-service/**/*
 
 .interaction-service-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - changes:
         - backend/interaction-service/**/*
 
@@ -390,13 +396,6 @@ container-scan:
     entrypoint: [""]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - backend/user-service/**/*
-        - backend/blog-service/**/*
-        - backend/file-service/**/*
-        - backend/customer-service/**/*
-        - backend/interaction-service/**/*
-        - frontend/**/*
   needs:
     - job: docker-user-service
       optional: true
