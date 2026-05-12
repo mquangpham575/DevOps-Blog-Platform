@@ -60,11 +60,12 @@ cache:
   stage: build
   script:
     - cd $SERVICE_DIR
-    # Maven will now automatically use the path defined in MAVEN_OPTS
     - mvn package -DskipTests
+    - mkdir -p ci-artifacts
+    - cp target/*.jar ci-artifacts/
   artifacts:
     paths:
-      - $SERVICE_DIR/target/*.jar
+      - $SERVICE_DIR/ci-artifacts/*.jar
     expire_in: 1 day
 
 .backend_test_template: &backend_test_def
@@ -92,6 +93,8 @@ cache:
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
+    - echo "Verifying build artifacts in $SERVICE_DIR/ci-artifacts..."
+    - ls -R $SERVICE_DIR/ci-artifacts || echo "No artifacts found"
     - docker build -t $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest -f $SERVICE_DIR/Dockerfile $SERVICE_DIR
     - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
     - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest
@@ -140,9 +143,11 @@ build-frontend:
     - cd frontend
     - npm ci
     - npm run build
+    - mkdir -p ci-artifacts
+    - cp -r dist/* ci-artifacts/
   artifacts:
     paths:
-      - frontend/dist/
+      - frontend/ci-artifacts/
     expire_in: 1 day
 
 # --- Test Stage ---
