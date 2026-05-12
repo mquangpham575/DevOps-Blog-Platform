@@ -20,80 +20,39 @@ validate-pipeline:
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
 
 # --- Change Detection Templates ---
-.user-service-changes:
+# --- Change Detection Templates ---
+.user-service-rules:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - changes:
-        - backend/user-service/**/*
-
-.blog-service-changes:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - changes:
-        - backend/blog-service/**/*
-
-.file-service-changes:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - changes:
-        - backend/file-service/**/*
-
-.frontend-changes:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - changes:
-        - frontend/**/*
-
-.customer-service-changes:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - changes:
-        - backend/customer-service/**/*
-
-.interaction-service-changes:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - changes:
-        - backend/interaction-service/**/*
-
-.user-service-main-changes:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/user-service/**/*
 
-.blog-service-main-changes:
+.blog-service-rules:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/blog-service/**/*
 
-.file-service-main-changes:
+.file-service-rules:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/file-service/**/*
 
-.frontend-main-changes:
+.frontend-rules:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - frontend/**/*
 
-.customer-service-main-changes:
+.customer-service-rules:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/customer-service/**/*
 
-.interaction-service-main-changes:
+.interaction-service-rules:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/interaction-service/**/*
@@ -123,6 +82,11 @@ cache:
 .backend_test_template: &backend_test_def
   image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
   stage: test
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - .m2/repository/
+    policy: pull
   script:
     - cd $SERVICE_DIR
     - mvn test -Dmaven.main.skip=true
@@ -148,38 +112,38 @@ cache:
 # --- Build Stage ---
 build-user-service:
   <<: *backend_build_def
-  extends: .user-service-changes
+  extends: .user-service-rules
   variables:
     SERVICE_DIR: "backend/user-service"
 
 build-blog-service:
   <<: *backend_build_def
-  extends: .blog-service-changes
+  extends: .blog-service-rules
   variables:
     SERVICE_DIR: "backend/blog-service"
 
 build-file-service:
   <<: *backend_build_def
-  extends: .file-service-changes
+  extends: .file-service-rules
   variables:
     SERVICE_DIR: "backend/file-service"
 
 build-customer-service:
   <<: *backend_build_def
-  extends: .customer-service-changes
+  extends: .customer-service-rules
   variables:
     SERVICE_DIR: "backend/customer-service"
 
 build-interaction-service:
   <<: *backend_build_def
-  extends: .interaction-service-changes
+  extends: .interaction-service-rules
   variables:
     SERVICE_DIR: "backend/interaction-service"
 
 build-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
   stage: build
-  extends: .frontend-changes
+  extends: .frontend-rules
   # Frontend uses its own cache to avoid overwriting/conflicting with Java cache
   cache:
     key: "node-$CI_COMMIT_REF_SLUG"
@@ -197,109 +161,108 @@ build-frontend:
 # --- Test Stage ---
 test-user-service:
   <<: *backend_test_def
-  extends: .user-service-changes
+  extends: .user-service-rules
   variables:
     SERVICE_DIR: "backend/user-service"
-  dependencies:
-    - build-user-service
+  needs: ["build-user-service"]
+  dependencies: []
 
 test-blog-service:
   <<: *backend_test_def
-  extends: .blog-service-changes
+  extends: .blog-service-rules
   variables:
     SERVICE_DIR: "backend/blog-service"
-  dependencies:
-    - build-blog-service
+  needs: ["build-blog-service"]
+  dependencies: []
 
 test-file-service:
   <<: *backend_test_def
-  extends: .file-service-changes
+  extends: .file-service-rules
   variables:
     SERVICE_DIR: "backend/file-service"
-  dependencies:
-    - build-file-service
+  needs: ["build-file-service"]
+  dependencies: []
 
 test-customer-service:
   <<: *backend_test_def
-  extends: .customer-service-changes
+  extends: .customer-service-rules
   variables:
     SERVICE_DIR: "backend/customer-service"
-  dependencies:
-    - build-customer-service
+  needs: ["build-customer-service"]
+  dependencies: []
 
 test-interaction-service:
   <<: *backend_test_def
-  extends: .interaction-service-changes
+  extends: .interaction-service-rules
   variables:
     SERVICE_DIR: "backend/interaction-service"
-  dependencies:
-    - build-interaction-service
+  needs: ["build-interaction-service"]
+  dependencies: []
 
 test-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
   stage: test
-  extends: .frontend-changes
+  extends: .frontend-rules
+  cache:
+    key: "node-$CI_COMMIT_REF_SLUG"
+    paths:
+      - frontend/node_modules/
+    policy: pull
   script:
     - cd frontend
-    - npm ci
+    - if [ ! -d "node_modules" ]; then npm ci; fi
     - npm test --if-present || echo "Tests not configured yet"
-  dependencies:
-    - build-frontend
+  needs: ["build-frontend"]
+  dependencies: []
 
 # --- Docker Build Stage ---
 docker-user-service:
   <<: *docker_build_def
-  extends: .user-service-main-changes
+  extends: .user-service-rules
   variables:
     SERVICE_DIR: "backend/user-service"
     IMAGE_NAME: "user-service"
-  dependencies:
-    - build-user-service
+  needs: ["build-user-service"]
 
 docker-blog-service:
   <<: *docker_build_def
-  extends: .blog-service-main-changes
+  extends: .blog-service-rules
   variables:
     SERVICE_DIR: "backend/blog-service"
     IMAGE_NAME: "blog-service"
-  dependencies:
-    - build-blog-service
+  needs: ["build-blog-service"]
 
 docker-file-service:
   <<: *docker_build_def
-  extends: .file-service-main-changes
+  extends: .file-service-rules
   variables:
     SERVICE_DIR: "backend/file-service"
     IMAGE_NAME: "file-service"
-  dependencies:
-    - build-file-service
+  needs: ["build-file-service"]
 
 docker-customer-service:
   <<: *docker_build_def
-  extends: .customer-service-main-changes
+  extends: .customer-service-rules
   variables:
     SERVICE_DIR: "backend/customer-service"
     IMAGE_NAME: "customer-service"
-  dependencies:
-    - build-customer-service
+  needs: ["build-customer-service"]
 
 docker-interaction-service:
   <<: *docker_build_def
-  extends: .interaction-service-main-changes
+  extends: .interaction-service-rules
   variables:
     SERVICE_DIR: "backend/interaction-service"
     IMAGE_NAME: "interaction-service"
-  dependencies:
-    - build-interaction-service
+  needs: ["build-interaction-service"]
 
 docker-frontend:
   <<: *docker_build_def
-  extends: .frontend-main-changes
+  extends: .frontend-rules
   variables:
     SERVICE_DIR: "frontend"
     IMAGE_NAME: "frontend"
-  dependencies:
-    - build-frontend
+  needs: ["build-frontend"]
 
 # --- Deploy Stage Template (ArgoCD / GitOps Sync) ---
 .deploy_template:
@@ -312,8 +275,14 @@ docker-frontend:
     - git config --global user.name "Gitlab CI"
     - git config --global user.email "ci@gitlab.com"
     - git remote set-url origin https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+    - # Install kustomize
+    - apk add --no-cache curl
+    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+    - mv kustomize /usr/local/bin/
   script:
-    - "sed -i \"/name: .*\\/$SERVICE_NAME/{n;s/newTag: .*/newTag: $CI_COMMIT_SHORT_SHA/}\" k8s/base/kustomization.yaml"
+    - cd k8s/base
+    - kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
+    - cd ../..
     - git add k8s/base/kustomization.yaml
     - git commit -m "Update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]" || echo "No changes to commit"
     - |
@@ -325,102 +294,109 @@ docker-frontend:
 deploy-user-service:
   extends:
     - .deploy_template
-    - .user-service-main-changes
+    - .user-service-rules
   variables:
     SERVICE_NAME: "user-service"
   needs:
     - test-user-service
     - docker-user-service
-    - job: container-scan
-      optional: true
+    - scan-user-service
 
 deploy-blog-service:
   extends:
     - .deploy_template
-    - .blog-service-main-changes
+    - .blog-service-rules
   variables:
     SERVICE_NAME: "blog-service"
   needs:
     - test-blog-service
     - docker-blog-service
-    - job: container-scan
-      optional: true
+    - scan-blog-service
 
 deploy-file-service:
   extends:
     - .deploy_template
-    - .file-service-main-changes
+    - .file-service-rules
   variables:
     SERVICE_NAME: "file-service"
   needs:
     - test-file-service
     - docker-file-service
-    - job: container-scan
-      optional: true
+    - scan-file-service
 
 deploy-customer-service:
   extends:
     - .deploy_template
-    - .customer-service-main-changes
+    - .customer-service-rules
   variables:
     SERVICE_NAME: "customer-service"
   needs:
     - test-customer-service
     - docker-customer-service
-    - job: container-scan
-      optional: true
+    - scan-customer-service
 
 deploy-interaction-service:
   extends:
     - .deploy_template
-    - .interaction-service-main-changes
+    - .interaction-service-rules
   variables:
     SERVICE_NAME: "interaction-service"
   needs:
     - test-interaction-service
     - docker-interaction-service
-    - job: container-scan
-      optional: true
+    - scan-interaction-service
 
 deploy-frontend:
   extends:
     - .deploy_template
-    - .frontend-main-changes
+    - .frontend-rules
   variables:
     SERVICE_NAME: "frontend"
   needs:
     - test-frontend
     - docker-frontend
-    - job: container-scan
-      optional: true
+    - scan-frontend
 
 # --- Security Scan (DevSecOps) ---
-container-scan:
+.scan_template:
   stage: scan
   image:
     name: public.ecr.aws/aquasecurity/trivy:0.69.3
     entrypoint: [""]
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-  needs:
-    - job: docker-user-service
-      optional: true
-    - job: docker-blog-service
-      optional: true
-    - job: docker-file-service
-      optional: true
-    - job: docker-customer-service
-      optional: true
-    - job: docker-interaction-service
-      optional: true
-    - job: docker-frontend
-      optional: true
-  script:
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA || true
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA || true
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA || true
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA || true
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA || true
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA || true
-    - echo "Scan finished for version $CI_COMMIT_SHORT_SHA. Review results above."
   allow_failure: true
+
+scan-user-service:
+  extends: [.scan_template, .user-service-rules]
+  needs: ["docker-user-service"]
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
+
+scan-blog-service:
+  extends: [.scan_template, .blog-service-rules]
+  needs: ["docker-blog-service"]
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
+
+scan-file-service:
+  extends: [.scan_template, .file-service-rules]
+  needs: ["docker-file-service"]
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
+
+scan-customer-service:
+  extends: [.scan_template, .customer-service-rules]
+  needs: ["docker-customer-service"]
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
+
+scan-interaction-service:
+  extends: [.scan_template, .interaction-service-rules]
+  needs: ["docker-interaction-service"]
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
+
+scan-frontend:
+  extends: [.scan_template, .frontend-rules]
+  needs: ["docker-frontend"]
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
