@@ -24,38 +24,26 @@ validate-pipeline:
 .user-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - backend/user-service/**/*
 
 .blog-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - backend/blog-service/**/*
 
 .file-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - backend/file-service/**/*
 
 .frontend-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - frontend/**/*
 
 .customer-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - backend/customer-service/**/*
 
 .interaction-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - backend/interaction-service/**/*
 
 variables:
   DOCKER_DRIVER: overlay2
