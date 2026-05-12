@@ -59,11 +59,13 @@ validate-pipeline:
 .user-service-main-changes:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/user-service/**/*
 
 .blog-service-main-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/blog-service/**/*
@@ -71,11 +73,13 @@ validate-pipeline:
 .file-service-main-changes:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/file-service/**/*
 
 .frontend-main-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - frontend/**/*
@@ -83,11 +87,13 @@ validate-pipeline:
 .customer-service-main-changes:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/customer-service/**/*
 
 .interaction-service-main-changes:
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/interaction-service/**/*
