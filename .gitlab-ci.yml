@@ -336,23 +336,29 @@ scan-frontend:
     - kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
     - cd ../..
     - git add k8s/base/kustomization.yaml
-    - git diff --cached --quiet && echo "No kustomization changes to commit" && exit 0
-    - git commit -m "ci: update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]"
-    # Retry push up to 5 times for rebase conflicts; exit immediately on auth failure (exit 128)
     - |
+      if git diff --cached --quiet; then
+        echo "No kustomization changes to commit, skipping deploy push."
+        exit 0
+      fi
+      git commit -m "ci: update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]"
       for i in $(seq 1 5); do
-        git pull --rebase origin main || { git rebase --abort; sleep 2; continue; }
+        if ! git pull --rebase origin main; then
+          git rebase --abort
+          sleep 3
+          continue
+        fi
         git push origin HEAD:main
         PUSH_EXIT=$?
         if [ $PUSH_EXIT -eq 0 ]; then
           break
         fi
         if [ $PUSH_EXIT -eq 128 ]; then
-          echo "Push failed with auth/permission error (exit 128). Aborting retry."
+          echo "Push failed with auth/permission error. Aborting."
           exit 1
         fi
-        echo "Push attempt $i failed (exit $PUSH_EXIT), retrying in $((RANDOM % 5 + 1))s..."
-        sleep $((RANDOM % 5 + 1))
+        echo "Push attempt $i failed, retrying..."
+        sleep 3
       done
 
 deploy-user-service:
