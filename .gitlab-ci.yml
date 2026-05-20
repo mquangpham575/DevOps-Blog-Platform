@@ -263,6 +263,29 @@ docker-frontend:
   dependencies: ["build-frontend"]
 
 # --- Security Scan (DevSecOps) ---
+
+# Dedicated DB warm-up job: downloads the vuln DB once and writes it to shared cache.
+# All scan jobs below use policy:pull to avoid redundant re-uploads.
+trivy-db-update:
+  stage: scan
+  image:
+    name: public.ecr.aws/aquasecurity/trivy:0.69.3
+    entrypoint: [""]
+  variables:
+    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  cache:
+    key: "trivy-db"
+    paths:
+      - .trivycache/
+    policy: pull-push
+  script:
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --download-db-only --no-progress
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --download-java-db-only --no-progress
+  timeout: 10m
+  allow_failure: true
+
 .scan_template:
   stage: scan
   image:
@@ -277,47 +300,61 @@ docker-frontend:
     - export TRIVY_USERNAME=$CI_REGISTRY_USER
     - export TRIVY_PASSWORD=$CI_REGISTRY_PASSWORD
   cache:
+    # Read-only: DB is already warmed by trivy-db-update job
     key: "trivy-db"
     paths:
       - .trivycache/
-    policy: pull-push
+    policy: pull
+  timeout: 5m
   allow_failure: true
 
 scan-user-service:
   extends: .scan_template
-  needs: ["docker-user-service"]
+  needs: ["docker-user-service", "trivy-db-update"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
+        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+        $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
 
 scan-blog-service:
   extends: .scan_template
-  needs: ["docker-blog-service"]
+  needs: ["docker-blog-service", "trivy-db-update"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
+        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+        $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
 
 scan-file-service:
   extends: .scan_template
-  needs: ["docker-file-service"]
+  needs: ["docker-file-service", "trivy-db-update"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
+        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+        $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
 
 scan-customer-service:
   extends: .scan_template
-  needs: ["docker-customer-service"]
+  needs: ["docker-customer-service", "trivy-db-update"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
+        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+        $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
 
 scan-interaction-service:
   extends: .scan_template
-  needs: ["docker-interaction-service"]
+  needs: ["docker-interaction-service", "trivy-db-update"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
+        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+        $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
 
 scan-frontend:
   extends: .scan_template
-  needs: ["docker-frontend"]
+  needs: ["docker-frontend", "trivy-db-update"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
+        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+        $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
 
 
 # --- Deploy Stage (ArgoCD / GitOps Sync) ---
