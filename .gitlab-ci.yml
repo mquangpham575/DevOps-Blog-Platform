@@ -322,6 +322,9 @@ scan-frontend:
     name: alpine/git:latest
     entrypoint: [""]
   resource_group: production-deploy
+  # Rules defined here - avoids multi-extends merge issue with script validation
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
   before_script:
     - git config --global user.name "Gitlab CI"
     - git config --global user.email "ci@gitlab.com"
@@ -362,9 +365,7 @@ scan-frontend:
       done
 
 deploy-user-service:
-  extends:
-    - .deploy_template
-    - .user-service-rules
+  extends: .deploy_template
   variables:
     SERVICE_NAME: "user-service"
   needs:
@@ -373,9 +374,7 @@ deploy-user-service:
     - scan-user-service
 
 deploy-blog-service:
-  extends:
-    - .deploy_template
-    - .blog-service-rules
+  extends: .deploy_template
   variables:
     SERVICE_NAME: "blog-service"
   needs:
@@ -384,9 +383,7 @@ deploy-blog-service:
     - scan-blog-service
 
 deploy-file-service:
-  extends:
-    - .deploy_template
-    - .file-service-rules
+  extends: .deploy_template
   variables:
     SERVICE_NAME: "file-service"
   needs:
@@ -395,9 +392,7 @@ deploy-file-service:
     - scan-file-service
 
 deploy-customer-service:
-  extends:
-    - .deploy_template
-    - .customer-service-rules
+  extends: .deploy_template
   variables:
     SERVICE_NAME: "customer-service"
   needs:
@@ -406,9 +401,7 @@ deploy-customer-service:
     - scan-customer-service
 
 deploy-interaction-service:
-  extends:
-    - .deploy_template
-    - .interaction-service-rules
+  extends: .deploy_template
   variables:
     SERVICE_NAME: "interaction-service"
   needs:
@@ -417,9 +410,7 @@ deploy-interaction-service:
     - scan-interaction-service
 
 deploy-frontend:
-  extends:
-    - .deploy_template
-    - .frontend-rules
+  extends: .deploy_template
   variables:
     SERVICE_NAME: "frontend"
   needs:
