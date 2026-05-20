@@ -6,7 +6,7 @@ stages:
   - scan
   - deploy
 
-# --- Validation Stage (Always Runs) ---
+# --- Validation Stage ---
 validate-pipeline:
   stage: validate
   image: alpine:latest
@@ -16,11 +16,11 @@ validate-pipeline:
     - echo "Branch - $CI_COMMIT_REF_NAME"
     - echo "Changes in this commit"
     - git diff --name-only $CI_COMMIT_BEFORE_SHA..$CI_COMMIT_SHA || echo "Initial commit or no previous SHA"
+  # Run on any pipeline targeting main (push, web trigger, API, etc.)
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
 
-# --- Change Detection Templates ---
-# --- Change Detection Templates ---
+# --- Change Detection Rules ---
 .user-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
@@ -78,7 +78,7 @@ cache:
     policy: pull
   script:
     - cd $SERVICE_DIR
-    - mvn test -Dmaven.main.skip=true
+    - mvn test
 
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
@@ -87,9 +87,8 @@ cache:
     - name: docker:24.0.5-dind
       alias: docker
   variables:
-    # Disable TLS to resolve "device or resource busy" and "timeout" issues on self-hosted runners
+    # Disable TLS to avoid "device or resource busy" and timeout on self-hosted runners
     DOCKER_TLS_CERTDIR: ""
-    DOCKER_DRIVER: overlay2
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
@@ -134,7 +133,7 @@ build-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
   stage: build
   extends: .frontend-rules
-  # Frontend uses its own cache to avoid overwriting/conflicting with Java cache
+  # Isolated cache to avoid polluting Java/.m2 cache
   cache:
     key: "node-$CI_COMMIT_REF_SLUG"
     paths:
@@ -202,8 +201,7 @@ test-frontend:
     policy: pull
   script:
     - cd frontend
-    - if [ ! -d "node_modules" ]; then npm ci; fi
-    - npm test --if-present || echo "Tests not configured yet"
+    - npm run test --if-present || echo "No test script configured"
   needs: ["build-frontend"]
   dependencies: []
 
@@ -262,7 +260,62 @@ docker-frontend:
   needs: ["build-frontend"]
   dependencies: ["build-frontend"]
 
-# --- Deploy Stage Template (ArgoCD / GitOps Sync) ---
+# --- Security Scan (DevSecOps) ---
+.scan_template:
+  stage: scan
+  image:
+    name: public.ecr.aws/aquasecurity/trivy:0.69.3
+    entrypoint: [""]
+  variables:
+    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
+  # Authenticate against the private GitLab registry so Trivy can pull the image to scan
+  before_script:
+    - export TRIVY_USERNAME=$CI_REGISTRY_USER
+    - export TRIVY_PASSWORD=$CI_REGISTRY_PASSWORD
+  cache:
+    key: "trivy-db"
+    paths:
+      - .trivycache/
+    policy: pull-push
+  allow_failure: true
+
+scan-user-service:
+  extends: [.scan_template, .user-service-rules]
+  needs: ["docker-user-service"]
+  script:
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
+
+scan-blog-service:
+  extends: [.scan_template, .blog-service-rules]
+  needs: ["docker-blog-service"]
+  script:
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
+
+scan-file-service:
+  extends: [.scan_template, .file-service-rules]
+  needs: ["docker-file-service"]
+  script:
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
+
+scan-customer-service:
+  extends: [.scan_template, .customer-service-rules]
+  needs: ["docker-customer-service"]
+  script:
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
+
+scan-interaction-service:
+  extends: [.scan_template, .interaction-service-rules]
+  needs: ["docker-interaction-service"]
+  script:
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
+
+scan-frontend:
+  extends: [.scan_template, .frontend-rules]
+  needs: ["docker-frontend"]
+  script:
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+
+# --- Deploy Stage (ArgoCD / GitOps Sync) ---
 .deploy_template:
   stage: deploy
   image:
@@ -273,20 +326,33 @@ docker-frontend:
     - git config --global user.name "Gitlab CI"
     - git config --global user.email "ci@gitlab.com"
     - git remote set-url origin https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
-    # Install kustomize
+    # Install a pinned kustomize version to avoid unpredictable installs from HEAD of master
     - apk add --no-cache curl
-    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-    - mv kustomize /usr/local/bin/
+    - curl -sLo /tmp/kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz"
+    - tar -xzf /tmp/kustomize.tar.gz -C /usr/local/bin/
+    - chmod +x /usr/local/bin/kustomize
   script:
     - cd k8s/base
     - kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
     - cd ../..
     - git add k8s/base/kustomization.yaml
-    - git commit -m "Update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]" || echo "No changes to commit"
+    - git diff --cached --quiet && echo "No kustomization changes to commit" && exit 0
+    - git commit -m "ci: update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]"
+    # Retry push up to 5 times for rebase conflicts; exit immediately on auth failure (exit 128)
     - |
       for i in $(seq 1 5); do
-        git pull --rebase origin main || true
-        git push origin HEAD:main && break || sleep $((RANDOM % 5 + 1))
+        git pull --rebase origin main
+        git push origin HEAD:main
+        PUSH_EXIT=$?
+        if [ $PUSH_EXIT -eq 0 ]; then
+          break
+        fi
+        if [ $PUSH_EXIT -eq 128 ]; then
+          echo "Push failed with auth/permission error (exit 128). Aborting retry."
+          exit 1
+        fi
+        echo "Push attempt $i failed (exit $PUSH_EXIT), retrying in $((RANDOM % 5 + 1))s..."
+        sleep $((RANDOM % 5 + 1))
       done
 
 deploy-user-service:
@@ -354,54 +420,3 @@ deploy-frontend:
     - test-frontend
     - docker-frontend
     - scan-frontend
-
-# --- Security Scan (DevSecOps) ---
-.scan_template:
-  stage: scan
-  image:
-    name: public.ecr.aws/aquasecurity/trivy:0.69.3
-    entrypoint: [""]
-  variables:
-    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
-  cache:
-    key: "trivy-db"
-    paths:
-      - .trivycache/
-    policy: pull-push
-  allow_failure: true
-
-scan-user-service:
-  extends: [.scan_template, .user-service-rules]
-  needs: ["docker-user-service"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
-
-scan-blog-service:
-  extends: [.scan_template, .blog-service-rules]
-  needs: ["docker-blog-service"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
-
-scan-file-service:
-  extends: [.scan_template, .file-service-rules]
-  needs: ["docker-file-service"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
-
-scan-customer-service:
-  extends: [.scan_template, .customer-service-rules]
-  needs: ["docker-customer-service"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
-
-scan-interaction-service:
-  extends: [.scan_template, .interaction-service-rules]
-  needs: ["docker-interaction-service"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
-
-scan-frontend:
-  extends: [.scan_template, .frontend-rules]
-  needs: ["docker-frontend"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
