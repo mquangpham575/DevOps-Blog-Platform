@@ -268,6 +268,8 @@ docker-frontend:
     entrypoint: [""]
   variables:
     TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
   # Authenticate against the private GitLab registry so Trivy can pull the image to scan
   before_script:
     - export TRIVY_USERNAME=$CI_REGISTRY_USER
@@ -280,40 +282,41 @@ docker-frontend:
   allow_failure: true
 
 scan-user-service:
-  extends: [.scan_template, .user-service-rules]
+  extends: .scan_template
   needs: ["docker-user-service"]
   script:
     - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
 
 scan-blog-service:
-  extends: [.scan_template, .blog-service-rules]
+  extends: .scan_template
   needs: ["docker-blog-service"]
   script:
     - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
 
 scan-file-service:
-  extends: [.scan_template, .file-service-rules]
+  extends: .scan_template
   needs: ["docker-file-service"]
   script:
     - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
 
 scan-customer-service:
-  extends: [.scan_template, .customer-service-rules]
+  extends: .scan_template
   needs: ["docker-customer-service"]
   script:
     - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
 
 scan-interaction-service:
-  extends: [.scan_template, .interaction-service-rules]
+  extends: .scan_template
   needs: ["docker-interaction-service"]
   script:
     - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
 
 scan-frontend:
-  extends: [.scan_template, .frontend-rules]
+  extends: .scan_template
   needs: ["docker-frontend"]
   script:
     - trivy image --cache-dir $TRIVY_CACHE_DIR --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+
 
 # --- Deploy Stage (ArgoCD / GitOps Sync) ---
 .deploy_template:
