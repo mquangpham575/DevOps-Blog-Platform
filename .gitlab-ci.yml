@@ -9,7 +9,9 @@ stages:
 # --- Validation Stage ---
 validate-pipeline:
   stage: validate
-  image: alpine/git:latest
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]
   script:
     - echo "Pipeline syntax is valid"
     - echo "Commit SHA - $CI_COMMIT_SHORT_SHA"
