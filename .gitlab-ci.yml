@@ -9,7 +9,7 @@ stages:
 # --- Validation Stage ---
 validate-pipeline:
   stage: validate
-  image: alpine:latest
+  image: alpine/git:latest
   script:
     - echo "Pipeline syntax is valid"
     - echo "Commit SHA - $CI_COMMIT_SHORT_SHA"
@@ -341,7 +341,7 @@ scan-frontend:
     # Retry push up to 5 times for rebase conflicts; exit immediately on auth failure (exit 128)
     - |
       for i in $(seq 1 5); do
-        git pull --rebase origin main
+        git pull --rebase origin main || { git rebase --abort; sleep 2; continue; }
         git push origin HEAD:main
         PUSH_EXIT=$?
         if [ $PUSH_EXIT -eq 0 ]; then
