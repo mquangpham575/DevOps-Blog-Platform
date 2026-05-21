@@ -49,20 +49,23 @@ validate-pipeline:
 
 variables:
   DOCKER_DRIVER: overlay2
-  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-
-cache:
-  key: "$CI_COMMIT_REF_SLUG"
-  paths:
-    - .m2/repository/
+  # Limit heap to prevent JVM from consuming all available RAM on shared runners
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Xmx768m -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 
 # --- Templates (DRY Principle) ---
 .backend_build_template: &backend_build_def
   image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
   stage: build
+  cache:
+    # Per-service key: avoids cross-service cache conflicts and reduces archive size
+    key: "maven-$SERVICE_DIR-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .m2/repository/com/
+      - .m2/repository/org/springframework/
+    policy: pull-push
   script:
     - cd $SERVICE_DIR
-    - mvn package -DskipTests
+    - mvn package -DskipTests -T 1C
     - mkdir -p ci-artifacts
     - cp target/*.jar ci-artifacts/
   artifacts:
@@ -74,13 +77,14 @@ cache:
   image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
   stage: test
   cache:
-    key: "$CI_COMMIT_REF_SLUG"
+    key: "maven-$SERVICE_DIR-$CI_COMMIT_REF_SLUG"
     paths:
-      - .m2/repository/
+      - .m2/repository/com/
+      - .m2/repository/org/springframework/
     policy: pull
   script:
     - cd $SERVICE_DIR
-    - mvn test
+    - mvn test -T 1C
 
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
