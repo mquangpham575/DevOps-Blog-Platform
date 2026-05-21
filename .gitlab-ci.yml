@@ -267,97 +267,66 @@ docker-frontend:
   dependencies: ["build-frontend"]
 
 # --- Security Scan (DevSecOps) ---
-
-# Dedicated DB warm-up job: downloads the vuln DB once and writes it to shared cache.
-# All scan jobs below use policy:pull to avoid redundant re-uploads.
-trivy-db-update:
-  stage: scan
-  image:
-    name: public.ecr.aws/aquasecurity/trivy:0.69.3
-    entrypoint: [""]
-  variables:
-    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-  cache:
-    key: "trivy-db"
-    paths:
-      - .trivycache/
-    policy: pull-push
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --download-db-only --no-progress
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --download-java-db-only --no-progress
-  timeout: 10m
-  allow_failure: true
-
 .scan_template:
   stage: scan
   image:
     name: public.ecr.aws/aquasecurity/trivy:0.69.3
     entrypoint: [""]
   variables:
-    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
+    # Use the host-mounted shared volume path
+    TRIVY_CACHE_DIR: "/opt/trivycache"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   # Authenticate against the private GitLab registry so Trivy can pull the image to scan
   before_script:
     - export TRIVY_USERNAME=$CI_REGISTRY_USER
     - export TRIVY_PASSWORD=$CI_REGISTRY_PASSWORD
-  cache:
-    # Read-only: DB is already warmed by trivy-db-update job
-    key: "trivy-db"
-    paths:
-      - .trivycache/
-    policy: pull
+  # We use host volume mount `/opt/trivycache` defined in runner config.toml
+  # No GitLab-managed zip cache needed anymore
+  cache: []
   timeout: 5m
   allow_failure: true
 
 scan-user-service:
   extends: .scan_template
-  needs: ["docker-user-service", "trivy-db-update"]
+  needs: ["docker-user-service"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
-        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
         $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
 
 scan-blog-service:
   extends: .scan_template
-  needs: ["docker-blog-service", "trivy-db-update"]
+  needs: ["docker-blog-service"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
-        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
         $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
 
 scan-file-service:
   extends: .scan_template
-  needs: ["docker-file-service", "trivy-db-update"]
+  needs: ["docker-file-service"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
-        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
         $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
 
 scan-customer-service:
   extends: .scan_template
-  needs: ["docker-customer-service", "trivy-db-update"]
+  needs: ["docker-customer-service"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
-        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
         $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
 
 scan-interaction-service:
   extends: .scan_template
-  needs: ["docker-interaction-service", "trivy-db-update"]
+  needs: ["docker-interaction-service"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
-        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
         $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
 
 scan-frontend:
   extends: .scan_template
-  needs: ["docker-frontend", "trivy-db-update"]
+  needs: ["docker-frontend"]
   script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update
-        --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
+    - trivy image --cache-dir $TRIVY_CACHE_DIR --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
         $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
 
 
@@ -374,7 +343,8 @@ scan-frontend:
   before_script:
     - git config --global user.name "Gitlab CI"
     - git config --global user.email "ci@gitlab.com"
-    - git remote set-url origin https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+    - git config --global http.postBuffer 524288000
+    - git remote set-url origin https://oauth2:${GIT_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
     # Install a pinned kustomize version to avoid unpredictable installs from HEAD of master
     - apk add --no-cache curl
     - curl -sLo /tmp/kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz"
