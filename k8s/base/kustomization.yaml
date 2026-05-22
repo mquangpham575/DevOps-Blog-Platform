@@ -67,4 +67,4 @@ images:
   newTag: 11aaabeb
 - name: registry.gitlab.com/mquangpham575/devops/user-service
   newName: registry.gitlab.com/mquangpham575/devops/user-service
-  newTag: a6540183
+  newTag: 248f367e
