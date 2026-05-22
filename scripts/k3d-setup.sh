@@ -11,10 +11,10 @@ echo "=== Creating k3d cluster: $CLUSTER_NAME ==="
 # Delete existing cluster if it exists
 k3d cluster delete $CLUSTER_NAME 2>/dev/null || true
 
-# Create cluster with 1 server + 2 agents, nginx ingress ports mapped
+# Create cluster with 1 server + 0 agents, nginx ingress ports mapped
 k3d cluster create $CLUSTER_NAME \
   --servers 1 \
-  --agents 2 \
+  --agents 0 \
   --port "8080:80@loadbalancer" \
   --port "8443:443@loadbalancer" \
   --port "19090:9090@loadbalancer" \
