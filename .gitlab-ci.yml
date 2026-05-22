@@ -276,11 +276,12 @@ prepare-trivy-db:
     entrypoint: [""]
   variables:
     TRIVY_CACHE_DIR: "/opt/trivycache"
+  dependencies: []
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   script:
-    - trivy image --download-db-only --cache-dir $TRIVY_CACHE_DIR
-    - trivy image --download-java-db-only --cache-dir $TRIVY_CACHE_DIR
+    - trivy image --download-db-only --db-repository public.ecr.aws/aquasecurity/trivy-db --cache-dir $TRIVY_CACHE_DIR
+    - trivy image --download-java-db-only --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db --cache-dir $TRIVY_CACHE_DIR
 
 .scan_template:
   stage: scan
