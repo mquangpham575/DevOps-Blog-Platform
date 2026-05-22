@@ -7,9 +7,11 @@ set -euo pipefail
 echo "=== Installing ArgoCD ==="
 
 # Install ArgoCD CLI
-echo "Installing ArgoCD CLI..."
-curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/stable/argocd-linux-amd64
-chmod +x /usr/local/bin/argocd
+if [ ! -f /usr/local/bin/argocd ]; then
+  echo "Installing ArgoCD CLI..."
+  sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/stable/argocd-linux-amd64
+  sudo chmod +x /usr/local/bin/argocd
+fi
 
 # Create namespace first
 kubectl create namespace argocd || true
