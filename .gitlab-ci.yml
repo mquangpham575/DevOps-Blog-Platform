@@ -48,6 +48,7 @@ validate-pipeline:
     - if: $CI_COMMIT_BRANCH == "main"
 
 variables:
+  GIT_DEPTH: "0"
   DOCKER_DRIVER: overlay2
   # Limit heap to prevent JVM from consuming all available RAM on shared runners
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Xmx768m -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
@@ -284,7 +285,7 @@ docker-frontend:
   # We use host volume mount `/opt/trivycache` defined in runner config.toml
   # No GitLab-managed zip cache needed anymore
   cache: []
-  timeout: 5m
+  timeout: 10m
   allow_failure: true
 
 scan-user-service:
