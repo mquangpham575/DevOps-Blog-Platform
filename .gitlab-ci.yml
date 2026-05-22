@@ -49,6 +49,7 @@ validate-pipeline:
 
 variables:
   GIT_DEPTH: "0"
+  GIT_STRATEGY: clone
   DOCKER_DRIVER: overlay2
   # Limit heap to prevent JVM from consuming all available RAM on shared runners
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Xmx768m -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
