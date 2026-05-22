@@ -51,7 +51,8 @@ labels:
 # This section is automatically updated by GitLab CI
 images:
 - name: registry.gitlab.com/mquangpham575/devops/blog-service
-  newTag: latest
+  newName: registry.gitlab.com/mquangpham575/devops/blog-service
+  newTag: 11aaabeb
 - name: registry.gitlab.com/mquangpham575/devops/customer-service
   newName: registry.gitlab.com/mquangpham575/devops/customer-service
   newTag: 11aaabeb
