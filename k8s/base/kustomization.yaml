@@ -53,7 +53,8 @@ images:
 - name: registry.gitlab.com/mquangpham575/devops/blog-service
   newTag: latest
 - name: registry.gitlab.com/mquangpham575/devops/customer-service
-  newTag: latest
+  newName: registry.gitlab.com/mquangpham575/devops/customer-service
+  newTag: 11aaabeb
 - name: registry.gitlab.com/mquangpham575/devops/file-service
   newName: registry.gitlab.com/mquangpham575/devops/file-service
   newTag: b1f6b68b
