@@ -60,7 +60,8 @@ images:
   newName: registry.gitlab.com/mquangpham575/devops/file-service
   newTag: 11aaabeb
 - name: registry.gitlab.com/mquangpham575/devops/frontend
-  newTag: latest
+  newName: registry.gitlab.com/mquangpham575/devops/frontend
+  newTag: 11aaabeb
 - name: registry.gitlab.com/mquangpham575/devops/interaction-service
   newName: registry.gitlab.com/mquangpham575/devops/interaction-service
   newTag: 11aaabeb
