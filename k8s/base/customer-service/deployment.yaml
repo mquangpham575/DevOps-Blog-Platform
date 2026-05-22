@@ -55,18 +55,24 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: JWT_EXPIRATION
+            - name: AI_BASE_URL
+              value: "https://generativelanguage.googleapis.com/v1beta/openai"
+            - name: AI_API_KEY
+              value: "AIzaSyDd5vZOSSv4Yn5KVaYZLLi1YcplxIPXt1Q"
           readinessProbe:
             httpGet:
               path: /actuator/health
               port: 8087
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 10
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8087
-            initialDelaySeconds: 90
+            initialDelaySeconds: 180
             periodSeconds: 10
+            timeoutSeconds: 5
           resources:
             requests:
               memory: "256Mi"
