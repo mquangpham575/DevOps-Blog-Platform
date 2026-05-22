@@ -351,34 +351,33 @@ scan-frontend:
     - tar -xzf /tmp/kustomize.tar.gz -C /usr/local/bin/
     - chmod +x /usr/local/bin/kustomize
   script:
-    - cd k8s/base
-    - kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
-    - cd ../..
-    - git add k8s/base/kustomization.yaml
     - |
-      if git diff --cached --quiet; then
-        echo "No kustomization changes to commit, skipping deploy push."
-        exit 0
-      fi
-      git commit -m "ci: update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]"
-      for i in $(seq 1 5); do
-        if ! git pull --rebase origin main; then
-          git rebase --abort
-          sleep 3
-          continue
-        fi
-        git push origin HEAD:main
-        PUSH_EXIT=$?
-        if [ $PUSH_EXIT -eq 0 ]; then
+      PUSH_SUCCESS=false
+      for i in $(seq 1 10); do
+        git fetch origin main
+        git checkout -f origin/main
+        cd k8s/base
+        kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
+        cd ../..
+        git add k8s/base/kustomization.yaml
+        if git diff --cached --quiet; then
+          echo "No kustomization changes to commit, skipping deploy push."
+          PUSH_SUCCESS=true
           break
         fi
-        if [ $PUSH_EXIT -eq 128 ]; then
-          echo "Push failed with auth/permission error. Aborting."
-          exit 1
+        git commit -m "ci: update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]"
+        if git push origin HEAD:main; then
+          echo "Successfully pushed update for $SERVICE_NAME"
+          PUSH_SUCCESS=true
+          break
         fi
         echo "Push attempt $i failed, retrying..."
-        sleep 3
+        sleep $((RANDOM % 5 + 2))
       done
+      if [ "$PUSH_SUCCESS" = false ]; then
+        echo "Failed to push updates after 10 attempts."
+        exit 1
+      fi
 
 deploy-user-service:
   extends: .deploy_template
