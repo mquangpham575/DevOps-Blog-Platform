@@ -271,7 +271,9 @@ docker-frontend:
 # --- Security Scan (DevSecOps) ---
 prepare-trivy-db:
   stage: docker-build
-  image: public.ecr.aws/aquasecurity/trivy:0.69.3
+  image:
+    name: public.ecr.aws/aquasecurity/trivy:0.69.3
+    entrypoint: [""]
   variables:
     TRIVY_CACHE_DIR: "/opt/trivycache"
   rules:
