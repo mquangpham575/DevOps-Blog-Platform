@@ -64,7 +64,7 @@ images:
   newTag: b9338c84
 - name: registry.gitlab.com/mquangpham575/devops/interaction-service
   newName: registry.gitlab.com/mquangpham575/devops/interaction-service
-  newTag: fc1c3fe9
+  newTag: b9338c84
 - name: registry.gitlab.com/mquangpham575/devops/user-service
   newName: registry.gitlab.com/mquangpham575/devops/user-service
   newTag: b9338c84
