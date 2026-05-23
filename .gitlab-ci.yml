@@ -17,7 +17,6 @@ validate-pipeline:
     - echo "Branch - $CI_COMMIT_REF_NAME"
     - echo "Changes in this commit"
     - git diff --name-only $CI_COMMIT_BEFORE_SHA..$CI_COMMIT_SHA || echo "Initial commit or no previous SHA"
-  # Run on any pipeline targeting main (push, web trigger, API, etc.)
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 
@@ -25,37 +24,69 @@ validate-pipeline:
 .user-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/user-service/**/*
+        - .gitlab-ci.yml
 
 .blog-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/blog-service/**/*
+        - .gitlab-ci.yml
 
 .file-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/file-service/**/*
+        - .gitlab-ci.yml
 
 .frontend-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - frontend/**/*
+        - .gitlab-ci.yml
 
 .customer-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/customer-service/**/*
+        - .gitlab-ci.yml
 
 .interaction-service-rules:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/interaction-service/**/*
+        - .gitlab-ci.yml
 
 variables:
   GIT_DEPTH: "0"
   GIT_STRATEGY: clone
   DOCKER_DRIVER: overlay2
-  # Limit heap to prevent JVM from consuming all available RAM on shared runners
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Xmx768m -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 
 # --- Templates (DRY Principle) ---
-
-
+.backend_build_template: &backend_build_def
+  image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
+  stage: build
+  cache:
+    key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .m2/repository/
+    policy: pull-push
+  script:
+    - cd $SERVICE_DIR
+    - mvn package -T 1C
+    - mkdir -p ci-artifacts
+    - cp target/*.jar ci-artifacts/
+  artifacts:
+    paths:
+      - $SERVICE_DIR/ci-artifacts/*.jar
+    expire_in: 1 day
 
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
@@ -64,7 +95,6 @@ variables:
     - name: docker:24.0.5-dind
       alias: docker
   variables:
-    # Disable TLS to avoid "device or resource busy" and timeout on self-hosted runners
     DOCKER_TLS_CERTDIR: ""
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
@@ -76,26 +106,35 @@ variables:
     - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest
 
 # --- Build Stage ---
-build-backend:
-  image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
-  stage: build
-  cache:
-    key: "maven-shared-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .m2/repository/
-    policy: pull-push
-  script:
-    - |
-      for service in user-service blog-service file-service customer-service interaction-service; do
-        echo "Building $service..."
-        mvn -f backend/$service/pom.xml package -T 1C
-        mkdir -p backend/$service/ci-artifacts
-        cp backend/$service/target/*.jar backend/$service/ci-artifacts/
-      done
-  artifacts:
-    paths:
-      - backend/*/ci-artifacts/*.jar
-    expire_in: 1 day
+build-user-service:
+  <<: *backend_build_def
+  extends: .user-service-rules
+  variables:
+    SERVICE_DIR: "backend/user-service"
+
+build-blog-service:
+  <<: *backend_build_def
+  extends: .blog-service-rules
+  variables:
+    SERVICE_DIR: "backend/blog-service"
+
+build-file-service:
+  <<: *backend_build_def
+  extends: .file-service-rules
+  variables:
+    SERVICE_DIR: "backend/file-service"
+
+build-customer-service:
+  <<: *backend_build_def
+  extends: .customer-service-rules
+  variables:
+    SERVICE_DIR: "backend/customer-service"
+
+build-interaction-service:
+  <<: *backend_build_def
+  extends: .interaction-service-rules
+  variables:
+    SERVICE_DIR: "backend/interaction-service"
 
 build-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
@@ -103,7 +142,6 @@ build-frontend:
   extends: .frontend-rules
   variables:
     npm_config_cache: "$CI_PROJECT_DIR/.npm"
-  # Isolated cache to avoid polluting Java/.m2 cache
   cache:
     key: "node-$CI_COMMIT_REF_SLUG"
     paths:
@@ -120,9 +158,6 @@ build-frontend:
       - frontend/ci-artifacts/
     expire_in: 1 day
 
-# --- Test Stage ---
-
-
 # --- Docker Build Stage ---
 docker-user-service:
   <<: *docker_build_def
@@ -130,8 +165,8 @@ docker-user-service:
   variables:
     SERVICE_DIR: "backend/user-service"
     IMAGE_NAME: "user-service"
-  needs: ["build-backend"]
-  dependencies: ["build-backend"]
+  needs: ["build-user-service"]
+  dependencies: ["build-user-service"]
 
 docker-blog-service:
   <<: *docker_build_def
@@ -139,8 +174,8 @@ docker-blog-service:
   variables:
     SERVICE_DIR: "backend/blog-service"
     IMAGE_NAME: "blog-service"
-  needs: ["build-backend"]
-  dependencies: ["build-backend"]
+  needs: ["build-blog-service"]
+  dependencies: ["build-blog-service"]
 
 docker-file-service:
   <<: *docker_build_def
@@ -148,8 +183,8 @@ docker-file-service:
   variables:
     SERVICE_DIR: "backend/file-service"
     IMAGE_NAME: "file-service"
-  needs: ["build-backend"]
-  dependencies: ["build-backend"]
+  needs: ["build-file-service"]
+  dependencies: ["build-file-service"]
 
 docker-customer-service:
   <<: *docker_build_def
@@ -157,8 +192,8 @@ docker-customer-service:
   variables:
     SERVICE_DIR: "backend/customer-service"
     IMAGE_NAME: "customer-service"
-  needs: ["build-backend"]
-  dependencies: ["build-backend"]
+  needs: ["build-customer-service"]
+  dependencies: ["build-customer-service"]
 
 docker-interaction-service:
   <<: *docker_build_def
@@ -166,8 +201,8 @@ docker-interaction-service:
   variables:
     SERVICE_DIR: "backend/interaction-service"
     IMAGE_NAME: "interaction-service"
-  needs: ["build-backend"]
-  dependencies: ["build-backend"]
+  needs: ["build-interaction-service"]
+  dependencies: ["build-interaction-service"]
 
 docker-frontend:
   <<: *docker_build_def
@@ -200,68 +235,72 @@ prepare-trivy-db:
     name: public.ecr.aws/aquasecurity/trivy:0.69.3
     entrypoint: [""]
   variables:
-    # Use the host-mounted shared volume path
     TRIVY_CACHE_DIR: "/opt/trivycache"
     GIT_STRATEGY: none
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-  # Authenticate against the private GitLab registry so Trivy can pull the image to scan
   before_script:
     - export TRIVY_USERNAME=$CI_REGISTRY_USER
     - export TRIVY_PASSWORD=$CI_REGISTRY_PASSWORD
   script:
     - trivy image --cache-backend memory --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
-  # We use host volume mount `/opt/trivycache` defined in runner config.toml
-  # No GitLab-managed zip cache needed anymore
   cache: []
   timeout: 10m
   allow_failure: true
 
 scan-user-service:
-  extends: .scan_template
+  extends:
+    - .scan_template
+    - .user-service-rules
   needs: ["docker-user-service", "prepare-trivy-db"]
   variables:
     IMAGE_NAME: "user-service"
 
 scan-blog-service:
-  extends: .scan_template
+  extends:
+    - .scan_template
+    - .blog-service-rules
   needs: ["docker-blog-service", "prepare-trivy-db"]
   variables:
     IMAGE_NAME: "blog-service"
 
 scan-file-service:
-  extends: .scan_template
+  extends:
+    - .scan_template
+    - .file-service-rules
   needs: ["docker-file-service", "prepare-trivy-db"]
   variables:
     IMAGE_NAME: "file-service"
 
 scan-customer-service:
-  extends: .scan_template
+  extends:
+    - .scan_template
+    - .customer-service-rules
   needs: ["docker-customer-service", "prepare-trivy-db"]
   variables:
     IMAGE_NAME: "customer-service"
 
 scan-interaction-service:
-  extends: .scan_template
+  extends:
+    - .scan_template
+    - .interaction-service-rules
   needs: ["docker-interaction-service", "prepare-trivy-db"]
   variables:
     IMAGE_NAME: "interaction-service"
 
 scan-frontend:
-  extends: .scan_template
+  extends:
+    - .scan_template
+    - .frontend-rules
   needs: ["docker-frontend", "prepare-trivy-db"]
   variables:
     IMAGE_NAME: "frontend"
 
-
 # --- Deploy Stage (ArgoCD / GitOps Sync) ---
-deploy-all:
+.deploy_template:
   stage: deploy
   image:
     name: alpine/git:latest
     entrypoint: [""]
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+  resource_group: production-deploy
   before_script:
     - git config --global user.name "Gitlab CI"
     - git config --global user.email "ci@gitlab.com"
@@ -278,13 +317,7 @@ deploy-all:
         git fetch origin main
         git checkout -f origin/main
         cd k8s/base
-        kustomize edit set image \
-          registry.gitlab.com/mquangpham575/devops/user-service=registry.gitlab.com/mquangpham575/devops/user-service:$CI_COMMIT_SHORT_SHA \
-          registry.gitlab.com/mquangpham575/devops/blog-service=registry.gitlab.com/mquangpham575/devops/blog-service:$CI_COMMIT_SHORT_SHA \
-          registry.gitlab.com/mquangpham575/devops/file-service=registry.gitlab.com/mquangpham575/devops/file-service:$CI_COMMIT_SHORT_SHA \
-          registry.gitlab.com/mquangpham575/devops/customer-service=registry.gitlab.com/mquangpham575/devops/customer-service:$CI_COMMIT_SHORT_SHA \
-          registry.gitlab.com/mquangpham575/devops/interaction-service=registry.gitlab.com/mquangpham575/devops/interaction-service:$CI_COMMIT_SHORT_SHA \
-          registry.gitlab.com/mquangpham575/devops/frontend=registry.gitlab.com/mquangpham575/devops/frontend:$CI_COMMIT_SHORT_SHA
+        kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
         cd ../..
         git add k8s/base/kustomization.yaml
         if git diff --cached --quiet; then
@@ -292,9 +325,9 @@ deploy-all:
           PUSH_SUCCESS=true
           break
         fi
-        git commit -m "ci: update all service image tags to $CI_COMMIT_SHORT_SHA [skip ci]"
+        git commit -m "ci: update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]"
         if git push origin HEAD:main; then
-          echo "Successfully pushed all updates."
+          echo "Successfully pushed update for $SERVICE_NAME"
           PUSH_SUCCESS=true
           break
         fi
@@ -305,17 +338,63 @@ deploy-all:
         echo "Failed to push updates after 10 attempts."
         exit 1
       fi
+
+deploy-user-service:
+  extends:
+    - .deploy_template
+    - .user-service-rules
+  variables:
+    SERVICE_NAME: "user-service"
   needs:
     - docker-user-service
-    - docker-blog-service
-    - docker-file-service
-    - docker-customer-service
-    - docker-interaction-service
-    - docker-frontend
     - scan-user-service
-    - scan-blog-service
-    - scan-file-service
-    - scan-customer-service
-    - scan-interaction-service
-    - scan-frontend
 
+deploy-blog-service:
+  extends:
+    - .deploy_template
+    - .blog-service-rules
+  variables:
+    SERVICE_NAME: "blog-service"
+  needs:
+    - docker-blog-service
+    - scan-blog-service
+
+deploy-file-service:
+  extends:
+    - .deploy_template
+    - .file-service-rules
+  variables:
+    SERVICE_NAME: "file-service"
+  needs:
+    - docker-file-service
+    - scan-file-service
+
+deploy-customer-service:
+  extends:
+    - .deploy_template
+    - .customer-service-rules
+  variables:
+    SERVICE_NAME: "customer-service"
+  needs:
+    - docker-customer-service
+    - scan-customer-service
+
+deploy-interaction-service:
+  extends:
+    - .deploy_template
+    - .interaction-service-rules
+  variables:
+    SERVICE_NAME: "interaction-service"
+  needs:
+    - docker-interaction-service
+    - scan-interaction-service
+
+deploy-frontend:
+  extends:
+    - .deploy_template
+    - .frontend-rules
+  variables:
+    SERVICE_NAME: "frontend"
+  needs:
+    - docker-frontend
+    - scan-frontend
