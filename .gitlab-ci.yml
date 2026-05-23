@@ -1,7 +1,6 @@
 stages:
   - validate
   - build
-  - test
   - docker-build
   - scan
   - deploy
@@ -59,14 +58,14 @@ variables:
   image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
   stage: build
   cache:
-    # Per-service key: avoids cross-service cache conflicts and reduces archive size
-    key: "maven-$SERVICE_DIR-$CI_COMMIT_REF_SLUG"
+    # Shared key across all backend services to maximize spring boot cache hits
+    key: "maven-shared-$CI_COMMIT_REF_SLUG"
     paths:
       - .m2/repository/
     policy: pull-push
   script:
     - cd $SERVICE_DIR
-    - mvn package -DskipTests -T 1C
+    - mvn package -T 1C
     - mkdir -p ci-artifacts
     - cp target/*.jar ci-artifacts/
   artifacts:
@@ -74,17 +73,7 @@ variables:
       - $SERVICE_DIR/ci-artifacts/*.jar
     expire_in: 1 day
 
-.backend_test_template: &backend_test_def
-  image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
-  stage: test
-  cache:
-    key: "maven-$SERVICE_DIR-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .m2/repository/
-    policy: pull
-  script:
-    - cd $SERVICE_DIR
-    - mvn test -T 1C
+
 
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
@@ -149,6 +138,7 @@ build-frontend:
   script:
     - cd frontend
     - npm ci
+    - npm run test --if-present
     - npm run build
     - mkdir -p ci-artifacts
     - cp -r dist/* ci-artifacts/
@@ -158,62 +148,7 @@ build-frontend:
     expire_in: 1 day
 
 # --- Test Stage ---
-test-user-service:
-  <<: *backend_test_def
-  extends: .user-service-rules
-  variables:
-    SERVICE_DIR: "backend/user-service"
-  needs: ["build-user-service"]
-  dependencies: []
 
-test-blog-service:
-  <<: *backend_test_def
-  extends: .blog-service-rules
-  variables:
-    SERVICE_DIR: "backend/blog-service"
-  needs: ["build-blog-service"]
-  dependencies: []
-
-test-file-service:
-  <<: *backend_test_def
-  extends: .file-service-rules
-  variables:
-    SERVICE_DIR: "backend/file-service"
-  needs: ["build-file-service"]
-  dependencies: []
-
-test-customer-service:
-  <<: *backend_test_def
-  extends: .customer-service-rules
-  variables:
-    SERVICE_DIR: "backend/customer-service"
-  needs: ["build-customer-service"]
-  dependencies: []
-
-test-interaction-service:
-  <<: *backend_test_def
-  extends: .interaction-service-rules
-  variables:
-    SERVICE_DIR: "backend/interaction-service"
-  needs: ["build-interaction-service"]
-  dependencies: []
-
-test-frontend:
-  image: public.ecr.aws/docker/library/node:20-alpine
-  stage: test
-  extends: .frontend-rules
-  variables:
-    npm_config_cache: "$CI_PROJECT_DIR/.npm"
-  cache:
-    key: "node-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .npm/
-    policy: pull
-  script:
-    - cd frontend
-    - npm run test --if-present || echo "No test script configured"
-  needs: ["build-frontend"]
-  dependencies: []
 
 # --- Docker Build Stage ---
 docker-user-service:
@@ -402,7 +337,6 @@ deploy-user-service:
   variables:
     SERVICE_NAME: "user-service"
   needs:
-    - test-user-service
     - docker-user-service
     - scan-user-service
 
@@ -411,7 +345,6 @@ deploy-blog-service:
   variables:
     SERVICE_NAME: "blog-service"
   needs:
-    - test-blog-service
     - docker-blog-service
     - scan-blog-service
 
@@ -420,7 +353,6 @@ deploy-file-service:
   variables:
     SERVICE_NAME: "file-service"
   needs:
-    - test-file-service
     - docker-file-service
     - scan-file-service
 
@@ -429,7 +361,6 @@ deploy-customer-service:
   variables:
     SERVICE_NAME: "customer-service"
   needs:
-    - test-customer-service
     - docker-customer-service
     - scan-customer-service
 
@@ -438,7 +369,6 @@ deploy-interaction-service:
   variables:
     SERVICE_NAME: "interaction-service"
   needs:
-    - test-interaction-service
     - docker-interaction-service
     - scan-interaction-service
 
@@ -447,6 +377,5 @@ deploy-frontend:
   variables:
     SERVICE_NAME: "frontend"
   needs:
-    - test-frontend
     - docker-frontend
     - scan-frontend
