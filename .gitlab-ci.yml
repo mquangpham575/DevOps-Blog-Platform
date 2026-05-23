@@ -54,24 +54,6 @@ variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Xmx768m -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 
 # --- Templates (DRY Principle) ---
-.backend_build_template: &backend_build_def
-  image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
-  stage: build
-  cache:
-    # Shared key across all backend services to maximize spring boot cache hits
-    key: "maven-shared-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .m2/repository/
-    policy: pull-push
-  script:
-    - cd $SERVICE_DIR
-    - mvn package -T 1C
-    - mkdir -p ci-artifacts
-    - cp target/*.jar ci-artifacts/
-  artifacts:
-    paths:
-      - $SERVICE_DIR/ci-artifacts/*.jar
-    expire_in: 1 day
 
 
 
@@ -94,35 +76,26 @@ variables:
     - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest
 
 # --- Build Stage ---
-build-user-service:
-  <<: *backend_build_def
-  extends: .user-service-rules
-  variables:
-    SERVICE_DIR: "backend/user-service"
-
-build-blog-service:
-  <<: *backend_build_def
-  extends: .blog-service-rules
-  variables:
-    SERVICE_DIR: "backend/blog-service"
-
-build-file-service:
-  <<: *backend_build_def
-  extends: .file-service-rules
-  variables:
-    SERVICE_DIR: "backend/file-service"
-
-build-customer-service:
-  <<: *backend_build_def
-  extends: .customer-service-rules
-  variables:
-    SERVICE_DIR: "backend/customer-service"
-
-build-interaction-service:
-  <<: *backend_build_def
-  extends: .interaction-service-rules
-  variables:
-    SERVICE_DIR: "backend/interaction-service"
+build-backend:
+  image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
+  stage: build
+  cache:
+    key: "maven-shared-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .m2/repository/
+    policy: pull-push
+  script:
+    - |
+      for service in user-service blog-service file-service customer-service interaction-service; do
+        echo "Building $service..."
+        mvn -f backend/$service/pom.xml package -T 1C
+        mkdir -p backend/$service/ci-artifacts
+        cp backend/$service/target/*.jar backend/$service/ci-artifacts/
+      done
+  artifacts:
+    paths:
+      - backend/*/ci-artifacts/*.jar
+    expire_in: 1 day
 
 build-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
@@ -157,8 +130,8 @@ docker-user-service:
   variables:
     SERVICE_DIR: "backend/user-service"
     IMAGE_NAME: "user-service"
-  needs: ["build-user-service"]
-  dependencies: ["build-user-service"]
+  needs: ["build-backend"]
+  dependencies: ["build-backend"]
 
 docker-blog-service:
   <<: *docker_build_def
@@ -166,8 +139,8 @@ docker-blog-service:
   variables:
     SERVICE_DIR: "backend/blog-service"
     IMAGE_NAME: "blog-service"
-  needs: ["build-blog-service"]
-  dependencies: ["build-blog-service"]
+  needs: ["build-backend"]
+  dependencies: ["build-backend"]
 
 docker-file-service:
   <<: *docker_build_def
@@ -175,8 +148,8 @@ docker-file-service:
   variables:
     SERVICE_DIR: "backend/file-service"
     IMAGE_NAME: "file-service"
-  needs: ["build-file-service"]
-  dependencies: ["build-file-service"]
+  needs: ["build-backend"]
+  dependencies: ["build-backend"]
 
 docker-customer-service:
   <<: *docker_build_def
@@ -184,8 +157,8 @@ docker-customer-service:
   variables:
     SERVICE_DIR: "backend/customer-service"
     IMAGE_NAME: "customer-service"
-  needs: ["build-customer-service"]
-  dependencies: ["build-customer-service"]
+  needs: ["build-backend"]
+  dependencies: ["build-backend"]
 
 docker-interaction-service:
   <<: *docker_build_def
@@ -193,8 +166,8 @@ docker-interaction-service:
   variables:
     SERVICE_DIR: "backend/interaction-service"
     IMAGE_NAME: "interaction-service"
-  needs: ["build-interaction-service"]
-  dependencies: ["build-interaction-service"]
+  needs: ["build-backend"]
+  dependencies: ["build-backend"]
 
 docker-frontend:
   <<: *docker_build_def
@@ -282,13 +255,11 @@ scan-frontend:
 
 
 # --- Deploy Stage (ArgoCD / GitOps Sync) ---
-.deploy_template:
+deploy-all:
   stage: deploy
   image:
     name: alpine/git:latest
     entrypoint: [""]
-  resource_group: production-deploy
-  # Rules defined here - avoids multi-extends merge issue with script validation
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   before_script:
@@ -296,7 +267,6 @@ scan-frontend:
     - git config --global user.email "ci@gitlab.com"
     - git config --global http.postBuffer 524288000
     - git remote set-url origin https://oauth2:${GIT_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
-    # Install a pinned kustomize version to avoid unpredictable installs from HEAD of master
     - apk add --no-cache curl
     - curl -sLo /tmp/kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz"
     - tar -xzf /tmp/kustomize.tar.gz -C /usr/local/bin/
@@ -308,7 +278,13 @@ scan-frontend:
         git fetch origin main
         git checkout -f origin/main
         cd k8s/base
-        kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
+        kustomize edit set image \
+          registry.gitlab.com/mquangpham575/devops/user-service=registry.gitlab.com/mquangpham575/devops/user-service:$CI_COMMIT_SHORT_SHA \
+          registry.gitlab.com/mquangpham575/devops/blog-service=registry.gitlab.com/mquangpham575/devops/blog-service:$CI_COMMIT_SHORT_SHA \
+          registry.gitlab.com/mquangpham575/devops/file-service=registry.gitlab.com/mquangpham575/devops/file-service:$CI_COMMIT_SHORT_SHA \
+          registry.gitlab.com/mquangpham575/devops/customer-service=registry.gitlab.com/mquangpham575/devops/customer-service:$CI_COMMIT_SHORT_SHA \
+          registry.gitlab.com/mquangpham575/devops/interaction-service=registry.gitlab.com/mquangpham575/devops/interaction-service:$CI_COMMIT_SHORT_SHA \
+          registry.gitlab.com/mquangpham575/devops/frontend=registry.gitlab.com/mquangpham575/devops/frontend:$CI_COMMIT_SHORT_SHA
         cd ../..
         git add k8s/base/kustomization.yaml
         if git diff --cached --quiet; then
@@ -316,9 +292,9 @@ scan-frontend:
           PUSH_SUCCESS=true
           break
         fi
-        git commit -m "ci: update $SERVICE_NAME image tag to $CI_COMMIT_SHORT_SHA [skip ci]"
+        git commit -m "ci: update all service image tags to $CI_COMMIT_SHORT_SHA [skip ci]"
         if git push origin HEAD:main; then
-          echo "Successfully pushed update for $SERVICE_NAME"
+          echo "Successfully pushed all updates."
           PUSH_SUCCESS=true
           break
         fi
@@ -329,51 +305,17 @@ scan-frontend:
         echo "Failed to push updates after 10 attempts."
         exit 1
       fi
-
-deploy-user-service:
-  extends: .deploy_template
-  variables:
-    SERVICE_NAME: "user-service"
   needs:
     - docker-user-service
-    - scan-user-service
-
-deploy-blog-service:
-  extends: .deploy_template
-  variables:
-    SERVICE_NAME: "blog-service"
-  needs:
     - docker-blog-service
-    - scan-blog-service
-
-deploy-file-service:
-  extends: .deploy_template
-  variables:
-    SERVICE_NAME: "file-service"
-  needs:
     - docker-file-service
-    - scan-file-service
-
-deploy-customer-service:
-  extends: .deploy_template
-  variables:
-    SERVICE_NAME: "customer-service"
-  needs:
     - docker-customer-service
-    - scan-customer-service
-
-deploy-interaction-service:
-  extends: .deploy_template
-  variables:
-    SERVICE_NAME: "interaction-service"
-  needs:
     - docker-interaction-service
-    - scan-interaction-service
-
-deploy-frontend:
-  extends: .deploy_template
-  variables:
-    SERVICE_NAME: "frontend"
-  needs:
     - docker-frontend
+    - scan-user-service
+    - scan-blog-service
+    - scan-file-service
+    - scan-customer-service
+    - scan-interaction-service
     - scan-frontend
+
