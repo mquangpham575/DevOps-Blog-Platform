@@ -234,6 +234,8 @@ prepare-trivy-db:
   before_script:
     - export TRIVY_USERNAME=$CI_REGISTRY_USER
     - export TRIVY_PASSWORD=$CI_REGISTRY_PASSWORD
+  script:
+    - trivy image --cache-backend memory --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
   # We use host volume mount `/opt/trivycache` defined in runner config.toml
   # No GitLab-managed zip cache needed anymore
   cache: []
@@ -243,44 +245,38 @@ prepare-trivy-db:
 scan-user-service:
   extends: .scan_template
   needs: ["docker-user-service", "prepare-trivy-db"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
-        $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHORT_SHA
+  variables:
+    IMAGE_NAME: "user-service"
 
 scan-blog-service:
   extends: .scan_template
   needs: ["docker-blog-service", "prepare-trivy-db"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
-        $CI_REGISTRY_IMAGE/blog-service:$CI_COMMIT_SHORT_SHA
+  variables:
+    IMAGE_NAME: "blog-service"
 
 scan-file-service:
   extends: .scan_template
   needs: ["docker-file-service", "prepare-trivy-db"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
-        $CI_REGISTRY_IMAGE/file-service:$CI_COMMIT_SHORT_SHA
+  variables:
+    IMAGE_NAME: "file-service"
 
 scan-customer-service:
   extends: .scan_template
   needs: ["docker-customer-service", "prepare-trivy-db"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
-        $CI_REGISTRY_IMAGE/customer-service:$CI_COMMIT_SHORT_SHA
+  variables:
+    IMAGE_NAME: "customer-service"
 
 scan-interaction-service:
   extends: .scan_template
   needs: ["docker-interaction-service", "prepare-trivy-db"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
-        $CI_REGISTRY_IMAGE/interaction-service:$CI_COMMIT_SHORT_SHA
+  variables:
+    IMAGE_NAME: "interaction-service"
 
 scan-frontend:
   extends: .scan_template
   needs: ["docker-frontend", "prepare-trivy-db"]
-  script:
-    - trivy image --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress
-        $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+  variables:
+    IMAGE_NAME: "frontend"
 
 
 # --- Deploy Stage (ArgoCD / GitOps Sync) ---
