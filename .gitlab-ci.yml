@@ -213,6 +213,7 @@ prepare-trivy-db:
     entrypoint: [""]
   variables:
     TRIVY_CACHE_DIR: "/opt/trivycache"
+    GIT_STRATEGY: none
   dependencies: []
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
@@ -228,6 +229,7 @@ prepare-trivy-db:
   variables:
     # Use the host-mounted shared volume path
     TRIVY_CACHE_DIR: "/opt/trivycache"
+    GIT_STRATEGY: none
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   # Authenticate against the private GitLab registry so Trivy can pull the image to scan
