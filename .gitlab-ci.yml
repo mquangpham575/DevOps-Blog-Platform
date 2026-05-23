@@ -62,8 +62,7 @@ variables:
     # Per-service key: avoids cross-service cache conflicts and reduces archive size
     key: "maven-$SERVICE_DIR-$CI_COMMIT_REF_SLUG"
     paths:
-      - .m2/repository/com/
-      - .m2/repository/org/springframework/
+      - .m2/repository/
     policy: pull-push
   script:
     - cd $SERVICE_DIR
@@ -81,8 +80,7 @@ variables:
   cache:
     key: "maven-$SERVICE_DIR-$CI_COMMIT_REF_SLUG"
     paths:
-      - .m2/repository/com/
-      - .m2/repository/org/springframework/
+      - .m2/repository/
     policy: pull
   script:
     - cd $SERVICE_DIR
@@ -141,11 +139,13 @@ build-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
   stage: build
   extends: .frontend-rules
+  variables:
+    npm_config_cache: "$CI_PROJECT_DIR/.npm"
   # Isolated cache to avoid polluting Java/.m2 cache
   cache:
     key: "node-$CI_COMMIT_REF_SLUG"
     paths:
-      - frontend/node_modules/
+      - .npm/
   script:
     - cd frontend
     - npm ci
@@ -202,10 +202,12 @@ test-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
   stage: test
   extends: .frontend-rules
+  variables:
+    npm_config_cache: "$CI_PROJECT_DIR/.npm"
   cache:
     key: "node-$CI_COMMIT_REF_SLUG"
     paths:
-      - frontend/node_modules/
+      - .npm/
     policy: pull
   script:
     - cd frontend
