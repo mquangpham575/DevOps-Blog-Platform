@@ -73,29 +73,15 @@ variables:
 .backend_build_template: &backend_build_def
   image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
   stage: build
-  cache:
-    key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .m2/repository/
-    policy: pull-push
   script:
     - cd $SERVICE_DIR
     - mvn package -T 1C
     - mkdir -p ci-artifacts
     - cp target/*.jar ci-artifacts/
-  artifacts:
-    paths:
-      - $SERVICE_DIR/ci-artifacts/*.jar
-    expire_in: 1 day
 
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
   stage: docker-build
-  services:
-    - name: docker:24.0.5-dind
-      alias: docker
-  variables:
-    DOCKER_TLS_CERTDIR: ""
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
@@ -111,30 +97,75 @@ build-user-service:
   extends: .user-service-rules
   variables:
     SERVICE_DIR: "backend/user-service"
+  cache:
+    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+      paths:
+        - .m2/repository/
+      policy: pull-push
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/user-service/ci-artifacts/
+      policy: push
 
 build-blog-service:
   <<: *backend_build_def
   extends: .blog-service-rules
   variables:
     SERVICE_DIR: "backend/blog-service"
+  cache:
+    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+      paths:
+        - .m2/repository/
+      policy: pull-push
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/blog-service/ci-artifacts/
+      policy: push
 
 build-file-service:
   <<: *backend_build_def
   extends: .file-service-rules
   variables:
     SERVICE_DIR: "backend/file-service"
+  cache:
+    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+      paths:
+        - .m2/repository/
+      policy: pull-push
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/file-service/ci-artifacts/
+      policy: push
 
 build-customer-service:
   <<: *backend_build_def
   extends: .customer-service-rules
   variables:
     SERVICE_DIR: "backend/customer-service"
+  cache:
+    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+      paths:
+        - .m2/repository/
+      policy: pull-push
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/customer-service/ci-artifacts/
+      policy: push
 
 build-interaction-service:
   <<: *backend_build_def
   extends: .interaction-service-rules
   variables:
     SERVICE_DIR: "backend/interaction-service"
+  cache:
+    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+      paths:
+        - .m2/repository/
+      policy: pull-push
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/interaction-service/ci-artifacts/
+      policy: push
 
 build-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
@@ -143,9 +174,14 @@ build-frontend:
   variables:
     npm_config_cache: "$CI_PROJECT_DIR/.npm"
   cache:
-    key: "node-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .npm/
+    - key: "node-$CI_COMMIT_REF_SLUG"
+      paths:
+        - .npm/
+      policy: pull-push
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - frontend/ci-artifacts/
+      policy: push
   script:
     - cd frontend
     - npm ci
@@ -153,10 +189,6 @@ build-frontend:
     - npm run build
     - mkdir -p ci-artifacts
     - cp -r dist/* ci-artifacts/
-  artifacts:
-    paths:
-      - frontend/ci-artifacts/
-    expire_in: 1 day
 
 # --- Docker Build Stage ---
 docker-user-service:
@@ -166,7 +198,12 @@ docker-user-service:
     SERVICE_DIR: "backend/user-service"
     IMAGE_NAME: "user-service"
   needs: ["build-user-service"]
-  dependencies: ["build-user-service"]
+  dependencies: []
+  cache:
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/user-service/ci-artifacts/
+      policy: pull
 
 docker-blog-service:
   <<: *docker_build_def
@@ -175,7 +212,12 @@ docker-blog-service:
     SERVICE_DIR: "backend/blog-service"
     IMAGE_NAME: "blog-service"
   needs: ["build-blog-service"]
-  dependencies: ["build-blog-service"]
+  dependencies: []
+  cache:
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/blog-service/ci-artifacts/
+      policy: pull
 
 docker-file-service:
   <<: *docker_build_def
@@ -184,7 +226,12 @@ docker-file-service:
     SERVICE_DIR: "backend/file-service"
     IMAGE_NAME: "file-service"
   needs: ["build-file-service"]
-  dependencies: ["build-file-service"]
+  dependencies: []
+  cache:
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/file-service/ci-artifacts/
+      policy: pull
 
 docker-customer-service:
   <<: *docker_build_def
@@ -193,7 +240,12 @@ docker-customer-service:
     SERVICE_DIR: "backend/customer-service"
     IMAGE_NAME: "customer-service"
   needs: ["build-customer-service"]
-  dependencies: ["build-customer-service"]
+  dependencies: []
+  cache:
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/customer-service/ci-artifacts/
+      policy: pull
 
 docker-interaction-service:
   <<: *docker_build_def
@@ -202,7 +254,12 @@ docker-interaction-service:
     SERVICE_DIR: "backend/interaction-service"
     IMAGE_NAME: "interaction-service"
   needs: ["build-interaction-service"]
-  dependencies: ["build-interaction-service"]
+  dependencies: []
+  cache:
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - backend/interaction-service/ci-artifacts/
+      policy: pull
 
 docker-frontend:
   <<: *docker_build_def
@@ -211,7 +268,12 @@ docker-frontend:
     SERVICE_DIR: "frontend"
     IMAGE_NAME: "frontend"
   needs: ["build-frontend"]
-  dependencies: ["build-frontend"]
+  dependencies: []
+  cache:
+    - key: "jars-$CI_COMMIT_SHA"
+      paths:
+        - frontend/ci-artifacts/
+      policy: pull
 
 # --- Security Scan (DevSecOps) ---
 prepare-trivy-db:
