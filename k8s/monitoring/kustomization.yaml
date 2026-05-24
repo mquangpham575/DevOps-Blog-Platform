@@ -5,6 +5,7 @@ namespace: monitoring
 resources:
   - prometheus.yaml
   - grafana.yaml
+  - ingress.yaml
 
 labels:
   - includeSelectors: true
