@@ -42,6 +42,7 @@ resources:
 - frontend/deployment.yaml
 - frontend/configmap.yaml
 - frontend/service.yaml
+- frontend/ingress.yaml
 
 labels:
 - includeSelectors: true
