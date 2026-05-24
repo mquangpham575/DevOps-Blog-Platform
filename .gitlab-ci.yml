@@ -5,6 +5,10 @@ stages:
   - scan
   - deploy
 
+default:
+  tags:
+    - sh-runner-devops2
+
 # --- Validation Stage ---
 validate-pipeline:
   stage: validate
@@ -64,7 +68,7 @@ validate-pipeline:
         - .gitlab-ci.yml
 
 variables:
-  GIT_DEPTH: "0"
+  GIT_DEPTH: "1"
   GIT_STRATEGY: clone
   DOCKER_DRIVER: overlay2
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Xmx768m -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
