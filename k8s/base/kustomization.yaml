@@ -52,7 +52,7 @@ labels:
 images:
 - name: registry.gitlab.com/mquangpham575/devops/blog-service
   newName: registry.gitlab.com/mquangpham575/devops/blog-service
-  newTag: 5d073ebd
+  newTag: 409a8322
 - name: registry.gitlab.com/mquangpham575/devops/customer-service
   newName: registry.gitlab.com/mquangpham575/devops/customer-service
   newTag: 5d073ebd
