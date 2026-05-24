@@ -82,6 +82,11 @@ variables:
     - mvn package -T 1C
     - mkdir -p ci-artifacts
     - cp target/*.jar ci-artifacts/
+  artifacts:
+    paths:
+      - $SERVICE_DIR/Dockerfile
+      - $SERVICE_DIR/ci-artifacts/
+    expire_in: 1 hr
 
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
@@ -106,10 +111,6 @@ build-user-service:
       paths:
         - .m2/repository/
       policy: pull-push
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/user-service/ci-artifacts/
-      policy: push
 
 build-blog-service:
   <<: *backend_build_def
@@ -121,10 +122,6 @@ build-blog-service:
       paths:
         - .m2/repository/
       policy: pull-push
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/blog-service/ci-artifacts/
-      policy: push
 
 build-file-service:
   <<: *backend_build_def
@@ -136,10 +133,6 @@ build-file-service:
       paths:
         - .m2/repository/
       policy: pull-push
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/file-service/ci-artifacts/
-      policy: push
 
 build-customer-service:
   <<: *backend_build_def
@@ -151,10 +144,6 @@ build-customer-service:
       paths:
         - .m2/repository/
       policy: pull-push
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/customer-service/ci-artifacts/
-      policy: push
 
 build-interaction-service:
   <<: *backend_build_def
@@ -166,10 +155,6 @@ build-interaction-service:
       paths:
         - .m2/repository/
       policy: pull-push
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/interaction-service/ci-artifacts/
-      policy: push
 
 build-frontend:
   image: public.ecr.aws/docker/library/node:20-alpine
@@ -182,10 +167,6 @@ build-frontend:
       paths:
         - .npm/
       policy: pull-push
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - frontend/ci-artifacts/
-      policy: push
   script:
     - cd frontend
     - npm ci
@@ -193,6 +174,12 @@ build-frontend:
     - npm run build
     - mkdir -p ci-artifacts
     - cp -r dist/* ci-artifacts/
+  artifacts:
+    paths:
+      - frontend/Dockerfile
+      - frontend/nginx.conf
+      - frontend/ci-artifacts/
+    expire_in: 1 hr
 
 # --- Docker Build Stage ---
 docker-user-service:
@@ -201,13 +188,9 @@ docker-user-service:
   variables:
     SERVICE_DIR: "backend/user-service"
     IMAGE_NAME: "user-service"
+    GIT_STRATEGY: none
   needs: ["build-user-service"]
-  dependencies: []
-  cache:
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/user-service/ci-artifacts/
-      policy: pull
+  dependencies: ["build-user-service"]
 
 docker-blog-service:
   <<: *docker_build_def
@@ -215,13 +198,9 @@ docker-blog-service:
   variables:
     SERVICE_DIR: "backend/blog-service"
     IMAGE_NAME: "blog-service"
+    GIT_STRATEGY: none
   needs: ["build-blog-service"]
-  dependencies: []
-  cache:
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/blog-service/ci-artifacts/
-      policy: pull
+  dependencies: ["build-blog-service"]
 
 docker-file-service:
   <<: *docker_build_def
@@ -229,13 +208,9 @@ docker-file-service:
   variables:
     SERVICE_DIR: "backend/file-service"
     IMAGE_NAME: "file-service"
+    GIT_STRATEGY: none
   needs: ["build-file-service"]
-  dependencies: []
-  cache:
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/file-service/ci-artifacts/
-      policy: pull
+  dependencies: ["build-file-service"]
 
 docker-customer-service:
   <<: *docker_build_def
@@ -243,13 +218,9 @@ docker-customer-service:
   variables:
     SERVICE_DIR: "backend/customer-service"
     IMAGE_NAME: "customer-service"
+    GIT_STRATEGY: none
   needs: ["build-customer-service"]
-  dependencies: []
-  cache:
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/customer-service/ci-artifacts/
-      policy: pull
+  dependencies: ["build-customer-service"]
 
 docker-interaction-service:
   <<: *docker_build_def
@@ -257,13 +228,9 @@ docker-interaction-service:
   variables:
     SERVICE_DIR: "backend/interaction-service"
     IMAGE_NAME: "interaction-service"
+    GIT_STRATEGY: none
   needs: ["build-interaction-service"]
-  dependencies: []
-  cache:
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - backend/interaction-service/ci-artifacts/
-      policy: pull
+  dependencies: ["build-interaction-service"]
 
 docker-frontend:
   <<: *docker_build_def
@@ -271,13 +238,9 @@ docker-frontend:
   variables:
     SERVICE_DIR: "frontend"
     IMAGE_NAME: "frontend"
+    GIT_STRATEGY: none
   needs: ["build-frontend"]
-  dependencies: []
-  cache:
-    - key: "jars-$CI_COMMIT_SHA"
-      paths:
-        - frontend/ci-artifacts/
-      policy: pull
+  dependencies: ["build-frontend"]
 
 # --- Security Scan (DevSecOps) ---
 prepare-trivy-db:
