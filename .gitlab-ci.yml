@@ -1,7 +1,6 @@
 # Clean run trigger to use newly configured local Maven cache
 stages:
   - validate
-  - build
   - docker-build
   - scan
   - deploy
@@ -72,115 +71,18 @@ variables:
   GIT_DEPTH: "1"
   GIT_STRATEGY: clone
   DOCKER_DRIVER: overlay2
-  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Xmx768m -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+  DOCKER_BUILDKIT: "1"
 
 # --- Templates (DRY Principle) ---
-.backend_build_template: &backend_build_def
-  image: public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17
-  stage: build
-  script:
-    - cd $SERVICE_DIR
-    - mvn package -T 1C
-    - mkdir -p ci-artifacts
-    - cp target/*.jar ci-artifacts/
-  artifacts:
-    paths:
-      - $SERVICE_DIR/Dockerfile
-      - $SERVICE_DIR/ci-artifacts/
-    expire_in: 1 hr
-
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
   stage: docker-build
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
-    - echo "Verifying build artifacts in $SERVICE_DIR/ci-artifacts..."
-    - ls -R $SERVICE_DIR/ci-artifacts || echo "No artifacts found"
     - docker build -t $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest -f $SERVICE_DIR/Dockerfile $SERVICE_DIR
     - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
     - docker push $CI_REGISTRY_IMAGE/$IMAGE_NAME:latest
-
-# --- Build Stage ---
-build-user-service:
-  <<: *backend_build_def
-  extends: .user-service-rules
-  variables:
-    SERVICE_DIR: "backend/user-service"
-  cache:
-    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-      paths:
-        - .m2/repository/
-      policy: pull-push
-
-build-blog-service:
-  <<: *backend_build_def
-  extends: .blog-service-rules
-  variables:
-    SERVICE_DIR: "backend/blog-service"
-  cache:
-    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-      paths:
-        - .m2/repository/
-      policy: pull-push
-
-build-file-service:
-  <<: *backend_build_def
-  extends: .file-service-rules
-  variables:
-    SERVICE_DIR: "backend/file-service"
-  cache:
-    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-      paths:
-        - .m2/repository/
-      policy: pull-push
-
-build-customer-service:
-  <<: *backend_build_def
-  extends: .customer-service-rules
-  variables:
-    SERVICE_DIR: "backend/customer-service"
-  cache:
-    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-      paths:
-        - .m2/repository/
-      policy: pull-push
-
-build-interaction-service:
-  <<: *backend_build_def
-  extends: .interaction-service-rules
-  variables:
-    SERVICE_DIR: "backend/interaction-service"
-  cache:
-    - key: "maven-$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-      paths:
-        - .m2/repository/
-      policy: pull-push
-
-build-frontend:
-  image: public.ecr.aws/docker/library/node:20-alpine
-  stage: build
-  extends: .frontend-rules
-  variables:
-    npm_config_cache: "$CI_PROJECT_DIR/.npm"
-  cache:
-    - key: "node-$CI_COMMIT_REF_SLUG"
-      paths:
-        - .npm/
-      policy: pull-push
-  script:
-    - cd frontend
-    - npm ci
-    - npm run test --if-present
-    - npm run build
-    - mkdir -p ci-artifacts
-    - cp -r dist/* ci-artifacts/
-  artifacts:
-    paths:
-      - frontend/Dockerfile
-      - frontend/nginx.conf
-      - frontend/ci-artifacts/
-    expire_in: 1 hr
 
 # --- Docker Build Stage ---
 docker-user-service:
@@ -189,9 +91,6 @@ docker-user-service:
   variables:
     SERVICE_DIR: "backend/user-service"
     IMAGE_NAME: "user-service"
-    GIT_STRATEGY: none
-  needs: ["build-user-service"]
-  dependencies: ["build-user-service"]
 
 docker-blog-service:
   <<: *docker_build_def
@@ -199,9 +98,6 @@ docker-blog-service:
   variables:
     SERVICE_DIR: "backend/blog-service"
     IMAGE_NAME: "blog-service"
-    GIT_STRATEGY: none
-  needs: ["build-blog-service"]
-  dependencies: ["build-blog-service"]
 
 docker-file-service:
   <<: *docker_build_def
@@ -209,9 +105,6 @@ docker-file-service:
   variables:
     SERVICE_DIR: "backend/file-service"
     IMAGE_NAME: "file-service"
-    GIT_STRATEGY: none
-  needs: ["build-file-service"]
-  dependencies: ["build-file-service"]
 
 docker-customer-service:
   <<: *docker_build_def
@@ -219,9 +112,6 @@ docker-customer-service:
   variables:
     SERVICE_DIR: "backend/customer-service"
     IMAGE_NAME: "customer-service"
-    GIT_STRATEGY: none
-  needs: ["build-customer-service"]
-  dependencies: ["build-customer-service"]
 
 docker-interaction-service:
   <<: *docker_build_def
@@ -229,9 +119,6 @@ docker-interaction-service:
   variables:
     SERVICE_DIR: "backend/interaction-service"
     IMAGE_NAME: "interaction-service"
-    GIT_STRATEGY: none
-  needs: ["build-interaction-service"]
-  dependencies: ["build-interaction-service"]
 
 docker-frontend:
   <<: *docker_build_def
@@ -239,9 +126,6 @@ docker-frontend:
   variables:
     SERVICE_DIR: "frontend"
     IMAGE_NAME: "frontend"
-    GIT_STRATEGY: none
-  needs: ["build-frontend"]
-  dependencies: ["build-frontend"]
 
 # --- Security Scan (DevSecOps) ---
 prepare-trivy-db:
