@@ -15,4 +15,4 @@ labels:
 configMapGenerator:
   - name: grafana-dashboard-spring
     files:
-      - spring-services.json=../../monitoring/grafana-dashboard-spring-services.json
+      - spring-services.json=grafana-dashboard-spring-services.json

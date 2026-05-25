@@ -89,10 +89,10 @@ k8s/
   overlays/dev/
   overlays/prod/
   monitoring/
+    grafana-dashboard-spring-services.json
 
 monitoring/
   prometheus.yml
-  grafana-dashboard-spring-services.json
 
 scripts/
   k3d-setup.sh
