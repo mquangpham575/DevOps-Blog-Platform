@@ -22,31 +22,43 @@ data:
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
+            labels:
+              application: 'prometheus'
 
       - job_name: 'user-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
           - targets: ['user-service.blog-app.svc:8081']
+            labels:
+              application: 'user-service'
 
       - job_name: 'blog-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
           - targets: ['blog-service.blog-app.svc:8082']
+            labels:
+              application: 'blog-service'
 
       - job_name: 'file-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
           - targets: ['file-service.blog-app.svc:8083']
+            labels:
+              application: 'file-service'
 
       - job_name: 'interaction-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
           - targets: ['interaction-service.blog-app.svc:8086']
+            labels:
+              application: 'interaction-service'
 
       - job_name: 'customer-service'
         metrics_path: '/actuator/prometheus'
         static_configs:
           - targets: ['customer-service.blog-app.svc:8087']
+            labels:
+              application: 'customer-service'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
