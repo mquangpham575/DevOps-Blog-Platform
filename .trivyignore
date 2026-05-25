@@ -1,0 +1,5 @@
+# Spring Boot predictability session hijacking CVE (no backported fix exists in Spring Boot 3.4.x)
+CVE-2026-40973
+
+# Spring Security authentication bypass CVE (no backported fix exists in Spring Security 6.4.x)
+CVE-2026-22732
