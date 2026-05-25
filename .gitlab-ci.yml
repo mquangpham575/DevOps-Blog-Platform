@@ -77,6 +77,11 @@ variables:
 .docker_build_template: &docker_build_def
   image: public.ecr.aws/docker/library/docker:24.0.5
   stage: docker-build
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - script_failure
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
@@ -144,6 +149,11 @@ prepare-trivy-db:
 
 .scan_template:
   stage: scan
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - script_failure
   image:
     name: public.ecr.aws/aquasecurity/trivy:0.69.3
     entrypoint: [""]
@@ -210,6 +220,11 @@ scan-frontend:
 # --- Deploy Stage (ArgoCD / GitOps Sync) ---
 .deploy_template:
   stage: deploy
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - script_failure
   image:
     name: alpine/git:latest
     entrypoint: [""]
