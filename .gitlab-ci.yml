@@ -1,3 +1,4 @@
+# Clean run trigger to use newly configured local Maven cache
 stages:
   - validate
   - build
