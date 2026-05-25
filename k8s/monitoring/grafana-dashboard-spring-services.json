@@ -112,7 +112,7 @@
             }
           },
           "mappings": [],
-          "unit": "epochms"
+          "unit": "dateTimeAsIso"
         },
         "overrides": []
       },
@@ -709,18 +709,12 @@
       "targets": [
         {
           "datasource": "Prometheus",
-          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{application=\"$application\", instance=\"$instance\"}[5m])) by (le))",
-          "legendFormat": "p95 Latency",
+          "expr": "sum(rate(http_server_requests_seconds_sum{application=\"$application\", instance=\"$instance\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}[5m]))",
+          "legendFormat": "Average Latency",
           "refId": "A"
-        },
-        {
-          "datasource": "Prometheus",
-          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{application=\"$application\", instance=\"$instance\"}[5m])) by (le))",
-          "legendFormat": "p99 Latency",
-          "refId": "B"
         }
       ],
-      "title": "HTTP Latency",
+      "title": "HTTP Latency (Average)",
       "type": "timeseries"
     },
     {
@@ -764,14 +758,14 @@
       "targets": [
         {
           "datasource": "Prometheus",
-          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=~\"5..\"}[5m])) by (uri)",
-          "legendFormat": "5xx Errors: {{uri}}",
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=~\"5..\"}[5m])) by (uri) or on() vector(0)",
+          "legendFormat": "5xx Errors",
           "refId": "A"
         },
         {
           "datasource": "Prometheus",
-          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=~\"4..\"}[5m])) by (uri)",
-          "legendFormat": "4xx Errors: {{uri}}",
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=~\"4..\"}[5m])) by (uri) or on() vector(0)",
+          "legendFormat": "4xx Errors",
           "refId": "B"
         }
       ],
