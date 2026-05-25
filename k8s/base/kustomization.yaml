@@ -59,7 +59,7 @@ images:
   newTag: 409a8322
 - name: registry.gitlab.com/mquangpham575/devops/file-service
   newName: registry.gitlab.com/mquangpham575/devops/file-service
-  newTag: 409a8322
+  newTag: 2fb83a26
 - name: registry.gitlab.com/mquangpham575/devops/frontend
   newName: registry.gitlab.com/mquangpham575/devops/frontend
   newTag: 409a8322
