@@ -1,4 +1,4 @@
-# Clean run trigger to use newly configured local Maven cache
+# Pipeline config - last updated 2026-05-26
 stages:
   - validate
   - docker-build
