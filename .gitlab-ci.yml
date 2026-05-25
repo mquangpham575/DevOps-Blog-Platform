@@ -22,11 +22,13 @@ validate-pipeline:
     - echo "Changes in this commit"
     - git diff --name-only $CI_COMMIT_BEFORE_SHA..$CI_COMMIT_SHA || echo "Initial commit or no previous SHA"
   rules:
+    - if: $FORCE_ALL == "true"
     - if: $CI_COMMIT_BRANCH == "main"
 
 # --- Change Detection Rules ---
 .user-service-rules:
   rules:
+    - if: $FORCE_ALL == "true"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/user-service/**/*
@@ -34,6 +36,7 @@ validate-pipeline:
 
 .blog-service-rules:
   rules:
+    - if: $FORCE_ALL == "true"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/blog-service/**/*
@@ -41,6 +44,7 @@ validate-pipeline:
 
 .file-service-rules:
   rules:
+    - if: $FORCE_ALL == "true"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/file-service/**/*
@@ -48,6 +52,7 @@ validate-pipeline:
 
 .frontend-rules:
   rules:
+    - if: $FORCE_ALL == "true"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - frontend/**/*
@@ -55,6 +60,7 @@ validate-pipeline:
 
 .customer-service-rules:
   rules:
+    - if: $FORCE_ALL == "true"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/customer-service/**/*
@@ -62,6 +68,7 @@ validate-pipeline:
 
 .interaction-service-rules:
   rules:
+    - if: $FORCE_ALL == "true"
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/interaction-service/**/*
