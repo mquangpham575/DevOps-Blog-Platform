@@ -166,7 +166,7 @@ prepare-trivy-db:
     entrypoint: [""]
   variables:
     TRIVY_CACHE_DIR: "/opt/trivycache"
-    GIT_STRATEGY: none
+    GIT_STRATEGY: fetch
   before_script:
     - export TRIVY_USERNAME=$CI_REGISTRY_USER
     - export TRIVY_PASSWORD=$CI_REGISTRY_PASSWORD
