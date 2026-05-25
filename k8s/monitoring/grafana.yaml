@@ -25,15 +25,6 @@ data:
         isDefault: true
         editable: true
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana-secrets
-  namespace: monitoring
-type: Opaque
-data:
-  GRAFANA_PASSWORD: YWRtaW4xMjM=
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

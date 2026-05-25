@@ -154,10 +154,10 @@ prepare-trivy-db:
     - export TRIVY_USERNAME=$CI_REGISTRY_USER
     - export TRIVY_PASSWORD=$CI_REGISTRY_PASSWORD
   script:
-    - trivy image --cache-backend memory --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --no-progress $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
+    - trivy image --cache-backend memory --cache-dir $TRIVY_CACHE_DIR --skip-db-update --skip-java-db-update --scanners vuln --exit-code 1 --severity HIGH,CRITICAL --no-progress $CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
   cache: []
   timeout: 10m
-  allow_failure: true
+  allow_failure: false
 
 scan-user-service:
   extends:

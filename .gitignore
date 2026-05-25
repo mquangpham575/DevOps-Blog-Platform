@@ -33,6 +33,3 @@ infor.md
 argocd/gitlab-repo-secret.yaml
 *secret*.yaml
 *.secret
-
-# Allow these specific secrets for manifest generation
-!k8s/base/secrets.yaml

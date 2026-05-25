@@ -22,6 +22,12 @@ resources:
 - file-db/deployment.yaml
 - file-db/service.yaml
 - file-db/pvc.yaml
+- customer-db/deployment.yaml
+- customer-db/service.yaml
+- customer-db/pvc.yaml
+- interaction-db/deployment.yaml
+- interaction-db/service.yaml
+- interaction-db/pvc.yaml
 - seaweedfs/master-deployment.yaml
 - seaweedfs/master-service.yaml
 - seaweedfs/volume-deployment.yaml

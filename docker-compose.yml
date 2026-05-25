@@ -283,6 +283,10 @@ services:
         condition: service_healthy
       file-service:
         condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      interaction-service:
+        condition: service_healthy
     networks:
       - blog-network
     restart: unless-stopped
@@ -336,6 +340,134 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # PostgreSQL for Customer Service
+  customer-db:
+    image: postgres:18-alpine
+    container_name: customer-database
+    environment:
+      POSTGRES_DB: customer_service_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - customer-db-data:/var/lib/postgresql/data
+    networks:
+      - blog-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Customer Service
+  customer-service:
+    image: ${CI_REGISTRY_IMAGE:-local}/customer-service:${CUSTOMER_TAG:-latest}
+    build:
+      context: ./backend/customer-service
+      dockerfile: Dockerfile
+    container_name: customer-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8087
+      SPRING_DATASOURCE_URL: jdbc:postgresql://customer-db:5432/customer_service_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      AI_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai"
+      AI_API_KEY: "AIzaSyDd5vZOSSv4Yn5KVaYZLLi1YcplxIPXt1Q"
+    depends_on:
+      customer-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:8087/actuator/health > /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - blog-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL for Interaction Service
+  interaction-db:
+    image: postgres:18-alpine
+    container_name: interaction-database
+    environment:
+      POSTGRES_DB: interaction_service_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - interaction-db-data:/var/lib/postgresql/data
+    networks:
+      - blog-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Interaction Service
+  interaction-service:
+    image: ${CI_REGISTRY_IMAGE:-local}/interaction-service:${INTERACTION_TAG:-latest}
+    build:
+      context: ./backend/interaction-service
+      dockerfile: Dockerfile
+    container_name: interaction-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8086
+      SPRING_DATASOURCE_URL: jdbc:postgresql://interaction-db:5432/interaction_service_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      USER_SERVICE_URL: http://user-service:8081
+      BLOG_SERVICE_URL: http://blog-service:8082
+    depends_on:
+      interaction-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:8086/actuator/health > /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - blog-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   blog-network:
     driver: bridge
@@ -348,3 +480,5 @@ volumes:
   seaweedfs-volume-data:
   prometheus-data:
   grafana-data:
+  customer-db-data:
+  interaction-db-data:
