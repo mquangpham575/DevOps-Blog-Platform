@@ -25,40 +25,22 @@ data:
             labels:
               application: 'prometheus'
 
-      - job_name: 'user-service'
-        metrics_path: '/actuator/prometheus'
-        static_configs:
-          - targets: ['user-service.blog-app.svc:8081']
-            labels:
-              application: 'user-service'
-
-      - job_name: 'blog-service'
-        metrics_path: '/actuator/prometheus'
-        static_configs:
-          - targets: ['blog-service.blog-app.svc:8082']
-            labels:
-              application: 'blog-service'
-
-      - job_name: 'file-service'
-        metrics_path: '/actuator/prometheus'
-        static_configs:
-          - targets: ['file-service.blog-app.svc:8083']
-            labels:
-              application: 'file-service'
-
-      - job_name: 'interaction-service'
-        metrics_path: '/actuator/prometheus'
-        static_configs:
-          - targets: ['interaction-service.blog-app.svc:8086']
-            labels:
-              application: 'interaction-service'
-
-      - job_name: 'customer-service'
-        metrics_path: '/actuator/prometheus'
-        static_configs:
-          - targets: ['customer-service.blog-app.svc:8087']
-            labels:
-              application: 'customer-service'
+      - job_name: 'kubernetes-service-endpoints'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - blog-app
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: .*-service
+          - target_label: __metrics_path__
+            replacement: /actuator/prometheus
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: application
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: job
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
