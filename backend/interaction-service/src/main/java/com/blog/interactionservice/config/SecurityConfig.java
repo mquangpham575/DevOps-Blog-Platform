@@ -17,6 +17,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    /**
+     * Configure HTTP security, session management, request authorization, and JWT authentication filter.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -28,6 +31,8 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/comments/**").permitAll()
                 // Internal endpoints: dùng trong nội bộ, không cần JWT (gọi từ service khác)
                 .requestMatchers("/api/internal/**").permitAll()
+                // Actuator endpoints: dùng cho Prometheus scrape metrics
+                .requestMatchers("/actuator/**").permitAll()
                 // Tất cả còn lại cần JWT
                 .anyRequest().authenticated()
             )
