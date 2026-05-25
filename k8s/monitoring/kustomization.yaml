@@ -11,3 +11,8 @@ labels:
   - includeSelectors: true
     pairs:
       app.kubernetes.io/part-of: blog-platform
+
+configMapGenerator:
+  - name: grafana-dashboard-spring
+    files:
+      - spring-services.json=../../monitoring/grafana-dashboard-spring-services.json

@@ -4,6 +4,17 @@ metadata:
   name: grafana-provisioning
   namespace: monitoring
 data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'Spring Boot Services'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
   datasources.yaml: |
     apiVersion: 1
     datasources:
@@ -63,6 +74,12 @@ spec:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
               readOnly: true
+            - name: dashboards-config
+              mountPath: /etc/grafana/provisioning/dashboards
+              readOnly: true
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+              readOnly: true
           resources:
             requests:
               memory: "128Mi"
@@ -77,6 +94,12 @@ spec:
         - name: datasources
           configMap:
             name: grafana-provisioning
+        - name: dashboards-config
+          configMap:
+            name: grafana-provisioning
+        - name: dashboards
+          configMap:
+            name: grafana-dashboard-spring
 ---
 apiVersion: v1
 kind: Service
