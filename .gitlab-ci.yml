@@ -69,7 +69,7 @@ validate-pipeline:
 
 variables:
   GIT_DEPTH: "1"
-  GIT_STRATEGY: clone
+  GIT_STRATEGY: fetch
   DOCKER_DRIVER: overlay2
   DOCKER_BUILDKIT: "1"
 
