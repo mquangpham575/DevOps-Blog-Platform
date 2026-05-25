@@ -37,6 +37,16 @@ data:
         metrics_path: '/actuator/prometheus'
         static_configs:
           - targets: ['file-service.blog-app.svc:8083']
+
+      - job_name: 'interaction-service'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['interaction-service.blog-app.svc:8086']
+
+      - job_name: 'customer-service'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['customer-service.blog-app.svc:8087']
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
