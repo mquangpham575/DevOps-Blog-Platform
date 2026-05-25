@@ -6,7 +6,6 @@ resources:
   - prometheus.yaml
   - grafana.yaml
   - ingress.yaml
-  - secrets.yaml
   - alertmanager.yaml
 
 labels:

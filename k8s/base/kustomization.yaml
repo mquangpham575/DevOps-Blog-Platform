@@ -12,7 +12,6 @@ kind: Kustomization
   # Frontend
 resources:
 - namespace.yaml
-- secrets.yaml
 - user-db/deployment.yaml
 - user-db/service.yaml
 - user-db/pvc.yaml
