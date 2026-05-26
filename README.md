@@ -37,20 +37,28 @@ graph TB
     US[User Service :8081]
     BS[Blog Service :8082]
     FS[File Service :8083]
+    IS[Interaction Service :8086]
+    CS[Customer Service :8087]
 
     UDB[(user_service_db)]
     BDB[(blog_service_db)]
     FDB[(file_service_db)]
+    IDB[(interaction_service_db)]
+    CDB[(customer_service_db)]
     SFS[SeaweedFS]
 
     U --> ING --> FE
     FE --> US
     FE --> BS
     FE --> FS
+    FE --> IS
+    FE --> CS
     US --> UDB
     BS --> BDB
     FS --> FDB
     FS --> SFS
+    IS --> IDB
+    CS --> CDB
 ```
 
 ## Services
