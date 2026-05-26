@@ -73,4 +73,4 @@ images:
   newTag: bfa97263
 - name: registry.gitlab.com/mquangpham575/devops/user-service
   newName: registry.gitlab.com/mquangpham575/devops/user-service
-  newTag: bfa97263
+  newTag: f170a1c7
