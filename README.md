@@ -93,15 +93,39 @@ backend/
   user-service/
   blog-service/
   file-service/
+  customer-service/
+  interaction-service/
 
 frontend/
 
 k8s/
   base/
-  overlays/dev/
-  overlays/prod/
+    blog-db/
+    blog-service/
+    customer-db/
+    customer-service/
+    file-db/
+    file-service/
+    frontend/
+    interaction-db/
+    interaction-service/
+    seaweedfs/
+    user-db/
+    user-service/
+    kustomization.yaml
+    namespace.yaml
+    secrets.yaml.template
+  overlays/
+    dev/
+    prod/
   monitoring/
+    alertmanager.yaml
     grafana-dashboard-spring-services.json
+    grafana.yaml
+    ingress.yaml
+    kustomization.yaml
+    prometheus.yaml
+    secrets.yaml.template
 
 monitoring/
   prometheus.yml
@@ -213,11 +237,9 @@ Backend APIs in compose are reachable through frontend proxy, not direct host po
 Current `.gitlab-ci.yml` pipeline stages:
 
 1. validate
-2. build
-3. test
-4. docker-build
-5. scan
-6. deploy
+2. docker-build (compiles Java, runs JUnit tests, and registers container images)
+3. scan (Trivy CVE checks with strict gating rules)
+4. deploy (reconciles ArgoCD image tag manifests)
 
 Current behavior:
 
@@ -257,5 +279,5 @@ k3d cluster delete blog-dev
 | Field          | Value              |
 | -------------- | ------------------ |
 | Course         | NT548.Q21 - DevOps |
-| Last Updated   | 2026-03-27         |
+| Last Updated   | 2026-05-26         |
 | Default Branch | `main`             |
