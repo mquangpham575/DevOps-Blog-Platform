@@ -346,13 +346,13 @@ deploy-frontend:
 .sonar_template:
   stage: static-analysis
   image:
-    name: sonarsource/sonar-scanner-cli:5.0
+    name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [""]
   variables:
     SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
     GIT_DEPTH: "0"
   cache:
-    key: "${CI_JOB_NAME}"
+    key: "sonar-shared-cache"
     paths:
       - .sonar/cache
   script:
