@@ -19,12 +19,25 @@ spec:
     spec:
       imagePullSecrets:
         - name: gitlab-registry
+      initContainers:
+        - name: otel-agent
+          image: ghcr.io/open-telemetry/opentelemetry-java-instrumentation/javaagent:1.32.0
+          command: ["cp", "/opentelemetry-javaagent.jar", "/otel/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - name: otel-agent-volume
+              mountPath: /otel
       containers:
         - name: file-service
           image: registry.gitlab.com/mquangpham575/devops/file-service:latest
           ports:
             - containerPort: 8083
           env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "file-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
             - name: SPRING_PROFILES_ACTIVE
               value: docker
             - name: SERVER_PORT
@@ -55,6 +68,9 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: JWT_EXPIRATION
+          volumeMounts:
+            - name: otel-agent-volume
+              mountPath: /otel
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -76,3 +92,6 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+      volumes:
+        - name: otel-agent-volume
+          emptyDir: {}

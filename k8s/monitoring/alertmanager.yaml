@@ -12,9 +12,16 @@ data:
       group_wait: 10s
       group_interval: 10s
       repeat_interval: 1h
-      receiver: 'null'
+      receiver: 'email-alerts'
     receivers:
-    - name: 'null'
+    - name: 'email-alerts'
+      email_configs:
+      - to: 'admin@vinh-lab.pp.ua'
+        from: 'alerts@vinh-host.duckdns.org'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'YOUR_SMTP_USER'
+        auth_password: 'YOUR_SMTP_PASSWORD'
+        require_tls: true
 ---
 apiVersion: apps/v1
 kind: Deployment

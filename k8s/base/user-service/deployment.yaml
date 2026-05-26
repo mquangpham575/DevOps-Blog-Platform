@@ -23,12 +23,25 @@ spec:
         options:
           - name: ndots
             value: "2"
+      initContainers:
+        - name: otel-agent
+          image: ghcr.io/open-telemetry/opentelemetry-java-instrumentation/javaagent:1.32.0
+          command: ["cp", "/opentelemetry-javaagent.jar", "/otel/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - name: otel-agent-volume
+              mountPath: /otel
       containers:
         - name: user-service
           image: registry.gitlab.com/mquangpham575/devops/user-service:latest
           ports:
             - containerPort: 8081
           env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "user-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
             - name: SPRING_PROFILES_ACTIVE
               value: docker
             - name: SERVER_PORT
@@ -73,6 +86,9 @@ spec:
               value: http://localhost:5173
             - name: MANAGEMENT_HEALTH_MAIL_ENABLED
               value: "false"
+          volumeMounts:
+            - name: otel-agent-volume
+              mountPath: /otel
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -94,3 +110,6 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+      volumes:
+        - name: otel-agent-volume
+          emptyDir: {}

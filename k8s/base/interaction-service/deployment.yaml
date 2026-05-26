@@ -23,12 +23,25 @@ spec:
         options:
           - name: ndots
             value: "2"
+      initContainers:
+        - name: otel-agent
+          image: ghcr.io/open-telemetry/opentelemetry-java-instrumentation/javaagent:1.32.0
+          command: ["cp", "/opentelemetry-javaagent.jar", "/otel/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - name: otel-agent-volume
+              mountPath: /otel
       containers:
         - name: interaction-service
           image: registry.gitlab.com/mquangpham575/devops/interaction-service:latest
           ports:
             - containerPort: 8086
           env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "interaction-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
             - name: SPRING_PROFILES_ACTIVE
               value: docker
             - name: SERVER_PORT
@@ -59,6 +72,9 @@ spec:
               value: http://user-service:8081
             - name: BLOG_SERVICE_URL
               value: http://blog-service:8082
+          volumeMounts:
+            - name: otel-agent-volume
+              mountPath: /otel
           readinessProbe:
             tcpSocket:
               port: 8086
@@ -78,3 +94,6 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+      volumes:
+        - name: otel-agent-volume
+          emptyDir: {}

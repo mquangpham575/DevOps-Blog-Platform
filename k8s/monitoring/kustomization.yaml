@@ -7,6 +7,8 @@ resources:
   - grafana.yaml
   - ingress.yaml
   - alertmanager.yaml
+  - loki-stack.yaml
+  - otel-collector.yaml
 
 labels:
   - includeSelectors: true
