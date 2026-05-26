@@ -1,4 +1,4 @@
-# Pipeline config - last updated 2026-05-26 - force run
+# Pipeline config - force sonar coverage exclusions run across all services
 stages:
   - validate
   - docker-build
