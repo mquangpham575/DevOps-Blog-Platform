@@ -67,7 +67,7 @@ images:
   newTag: bfa97263
 - name: registry.gitlab.com/mquangpham575/devops/frontend
   newName: registry.gitlab.com/mquangpham575/devops/frontend
-  newTag: 479196c1
+  newTag: bfa97263
 - name: registry.gitlab.com/mquangpham575/devops/interaction-service
   newName: registry.gitlab.com/mquangpham575/devops/interaction-service
   newTag: bfa97263
