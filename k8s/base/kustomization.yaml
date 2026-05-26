@@ -61,7 +61,7 @@ images:
   newTag: 220bbf6d
 - name: registry.gitlab.com/mquangpham575/devops/customer-service
   newName: registry.gitlab.com/mquangpham575/devops/customer-service
-  newTag: 220bbf6d
+  newTag: 23d38863
 - name: registry.gitlab.com/mquangpham575/devops/file-service
   newName: registry.gitlab.com/mquangpham575/devops/file-service
   newTag: 23d38863
