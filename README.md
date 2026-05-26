@@ -198,23 +198,27 @@ kubectl apply -f argocd/monitoring.yaml
 Add on your local machine:
 
 ```text
-127.0.0.1 blog.local argocd.local grafana.local prometheus.local
+127.0.0.1 blog.local argocd.local grafana.local prometheus.local jaeger.local
 ```
 
 ## Access URLs
 
-| Service       | HTTP URL                       | HTTPS URL                       | Credentials |
-| ------------- | ------------------------------ | ------------------------------- | ----------- |
-| Blog Frontend | `http://blog.local:8000`       | `https://blog.local:8443`       | - |
-| ArgoCD        | `http://argocd.local:8000`      | `https://argocd.local:8443`     | `admin` / `l1J4voFTGLNt6nsU` |
-| Grafana       | `http://grafana.local:8000`    | `https://grafana.local:8443`    | `admin` / `admin123` |
-| Prometheus    | `http://prometheus.local:8000` | `https://prometheus.local:8443` | - |
+| Service | HTTP URL | HTTPS URL | Credentials |
+| :--- | :--- | :--- | :--- |
+| **Blog Frontend** | `http://blog.local:8000` | `https://blog.local:8443` | - |
+| **ArgoCD (GitOps)** | `http://argocd.local:8000` | `https://argocd.local:8443` | `admin` / `l1J4voFTGLNt6nsU` |
+| **Grafana (Metrics & Loki Logs)** | `http://grafana.local:8000` | `https://grafana.local:8443` | `admin` / `admin123` |
+| **Prometheus (Metrics Ingestion)** | `http://prometheus.local:8000` | `https://prometheus.local:8443` | - |
+| **Jaeger (Distributed Tracing)** | `http://jaeger.local:8000` | `https://jaeger.local:8443` | - |
+| **SonarCloud (Cloud Static Analysis)** | [SonarCloud Project Link](https://sonarcloud.io/organizations/mquangpham575/projects) | - | Authenticate via GitLab |
 
 Notes:
 
+- **Self-Hosted SonarQube**: The containerized SonarQube deployment in `sonarqube.yaml` is disabled to prevent JVM memory exhaustion on Proxmox VM 116. We transitioned to the cloud-hosted **SonarCloud** instance for all static analysis stages.
+- **Loki logs**: Promtail collects container stdout/stderr logs and streams them to the cluster-internal Loki service. Loki is not exposed via ingress but is directly integrated as a datasource in **Grafana** (Explore tab -> Loki).
 - All services are now accessible via both HTTP (port 8000) and HTTPS (port 8443).
 - SSL redirection is disabled to allow direct HTTP access for development.
-- Monitoring routes are exposed via ingress hostnames in `k8s/monitoring/grafana.yaml`.
+- Monitoring routes are exposed via ingress hostnames in `k8s/monitoring/ingress.yaml`.
 
 ## Local Development (Docker Compose)
 
