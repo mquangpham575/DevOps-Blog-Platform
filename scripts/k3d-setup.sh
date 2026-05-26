@@ -15,7 +15,7 @@ k3d cluster delete $CLUSTER_NAME 2>/dev/null || true
 k3d cluster create $CLUSTER_NAME \
   --servers 1 \
   --agents 0 \
-  --port "8080:80@loadbalancer" \
+  --port "8000:80@loadbalancer" \
   --port "8443:443@loadbalancer" \
   --port "19090:9090@loadbalancer" \
   --port "3001:3000@loadbalancer" \
