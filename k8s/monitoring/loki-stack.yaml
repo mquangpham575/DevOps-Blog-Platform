@@ -110,6 +110,11 @@ spec:
         image: grafana/promtail:2.9.2
         args:
         - "-config.file=/etc/promtail/promtail.yaml"
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         volumeMounts:
         - name: logs
           mountPath: /var/log
