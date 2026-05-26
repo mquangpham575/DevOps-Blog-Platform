@@ -61,7 +61,7 @@ images:
   newTag: f170a1c7
 - name: registry.gitlab.com/mquangpham575/devops/customer-service
   newName: registry.gitlab.com/mquangpham575/devops/customer-service
-  newTag: bfa97263
+  newTag: f170a1c7
 - name: registry.gitlab.com/mquangpham575/devops/file-service
   newName: registry.gitlab.com/mquangpham575/devops/file-service
   newTag: f170a1c7
