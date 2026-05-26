@@ -9,7 +9,7 @@ resources:
   - alertmanager.yaml
   - loki-stack.yaml
   - otel-collector.yaml
-  - sonarqube.yaml
+
 
 labels:
   - includeSelectors: true
