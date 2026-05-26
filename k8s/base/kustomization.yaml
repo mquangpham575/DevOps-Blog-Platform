@@ -64,7 +64,7 @@ images:
   newTag: b12ca2f1
 - name: registry.gitlab.com/mquangpham575/devops/file-service
   newName: registry.gitlab.com/mquangpham575/devops/file-service
-  newTag: b12ca2f1
+  newTag: 5c521249
 - name: registry.gitlab.com/mquangpham575/devops/frontend
   newName: registry.gitlab.com/mquangpham575/devops/frontend
   newTag: 1022c269
