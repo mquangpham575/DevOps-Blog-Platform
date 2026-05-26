@@ -374,6 +374,9 @@ sonar-blog-service:
   variables:
     IMAGE_NAME: "blog-service"
     SERVICE_DIR: "backend/blog-service"
+  needs:
+    - job: sonar-user-service
+      optional: true
 
 sonar-file-service:
   extends:
@@ -382,6 +385,9 @@ sonar-file-service:
   variables:
     IMAGE_NAME: "file-service"
     SERVICE_DIR: "backend/file-service"
+  needs:
+    - job: sonar-blog-service
+      optional: true
 
 sonar-customer-service:
   extends:
@@ -390,6 +396,9 @@ sonar-customer-service:
   variables:
     IMAGE_NAME: "customer-service"
     SERVICE_DIR: "backend/customer-service"
+  needs:
+    - job: sonar-file-service
+      optional: true
 
 sonar-interaction-service:
   extends:
@@ -398,6 +407,9 @@ sonar-interaction-service:
   variables:
     IMAGE_NAME: "interaction-service"
     SERVICE_DIR: "backend/interaction-service"
+  needs:
+    - job: sonar-customer-service
+      optional: true
 
 sonar-frontend:
   extends:
@@ -406,3 +418,6 @@ sonar-frontend:
   variables:
     IMAGE_NAME: "frontend"
     SERVICE_DIR: "frontend"
+  needs:
+    - job: sonar-interaction-service
+      optional: true
