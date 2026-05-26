@@ -284,6 +284,7 @@ deploy-user-service:
   needs:
     - docker-user-service
     - scan-user-service
+    - sonar-user-service
 
 deploy-blog-service:
   extends:
@@ -294,6 +295,7 @@ deploy-blog-service:
   needs:
     - docker-blog-service
     - scan-blog-service
+    - sonar-blog-service
 
 deploy-file-service:
   extends:
@@ -304,6 +306,7 @@ deploy-file-service:
   needs:
     - docker-file-service
     - scan-file-service
+    - sonar-file-service
 
 deploy-customer-service:
   extends:
@@ -314,6 +317,7 @@ deploy-customer-service:
   needs:
     - docker-customer-service
     - scan-customer-service
+    - sonar-customer-service
 
 deploy-interaction-service:
   extends:
@@ -324,6 +328,7 @@ deploy-interaction-service:
   needs:
     - docker-interaction-service
     - scan-interaction-service
+    - sonar-interaction-service
 
 deploy-frontend:
   extends:
@@ -334,6 +339,7 @@ deploy-frontend:
   needs:
     - docker-frontend
     - scan-frontend
+    - sonar-frontend
 
 # --- Static Analysis Stage (SonarQube) ---
 .sonar_template:
