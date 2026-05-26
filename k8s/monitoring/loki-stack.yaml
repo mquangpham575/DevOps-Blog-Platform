@@ -151,8 +151,7 @@ rules:
   - nodes/proxy
   - services
   - pods
-  configmaps:
-  - ""
+  - configmaps
   verbs: ["get", "watch", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
