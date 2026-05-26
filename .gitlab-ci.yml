@@ -356,7 +356,7 @@ deploy-frontend:
     paths:
       - .sonar/cache
   script:
-    - sonar-scanner -Dsonar.projectKey=${SONAR_ORGANIZATION}_${IMAGE_NAME} -Dsonar.projectName=${IMAGE_NAME} -Dsonar.sources=${SERVICE_DIR} -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_TOKEN} -Dsonar.organization=${SONAR_ORGANIZATION} -Dsonar.java.binaries=. -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/.next/**,**/*.min.js -Dsonar.jasmin.internal.disabled=true
+    - sonar-scanner -Dsonar.projectKey=${SONAR_ORGANIZATION}_${IMAGE_NAME} -Dsonar.projectName=${IMAGE_NAME} -Dsonar.sources=${SERVICE_DIR} -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_TOKEN} -Dsonar.organization=${SONAR_ORGANIZATION} -Dsonar.java.binaries=. -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/.next/**,**/*.min.js -Dsonar.javascript.node.maxspace=1400 -Dsonar.javascript.createTSProgramForOrphanFiles=false
   allow_failure: true
 
 sonar-user-service:
