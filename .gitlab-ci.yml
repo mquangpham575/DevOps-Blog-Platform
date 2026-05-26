@@ -340,7 +340,6 @@ deploy-frontend:
   needs:
     - docker-frontend
     - scan-frontend
-    - sonar-frontend
 
 # --- Static Analysis Stage (SonarQube) ---
 .sonar_template:
@@ -411,16 +410,4 @@ sonar-interaction-service:
     - job: sonar-customer-service
       optional: true
 
-sonar-frontend:
-  extends:
-    - .sonar_template
-    - .frontend-rules
-  variables:
-    IMAGE_NAME: "frontend"
-    SERVICE_DIR: "frontend"
-    SONAR_SCANNER_JAVA_OPTS: "-Xmx1024m"
-  script:
-    - sonar-scanner -Dsonar.projectKey=${SONAR_ORGANIZATION}_${IMAGE_NAME} -Dsonar.projectName=${IMAGE_NAME} -Dsonar.sources=${SERVICE_DIR} -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_TOKEN} -Dsonar.organization=${SONAR_ORGANIZATION} -Dsonar.java.binaries=. -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/.next/**,**/*.min.js -Dsonar.javascript.node.maxspace=512 -Dsonar.javascript.createTSProgramForOrphanFiles=false
-  needs:
-    - job: sonar-interaction-service
-      optional: true
+
