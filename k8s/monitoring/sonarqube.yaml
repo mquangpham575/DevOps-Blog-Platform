@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+  namespace: monitoring
+  labels:
+    app: sonarqube
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonarqube
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+    spec:
+      containers:
+      - name: sonarqube
+        image: public.ecr.aws/docker/library/sonarqube:10.4.1-community
+        ports:
+        - containerPort: 9000
+          name: http
+        env:
+        - name: SONAR_SEARCH_JAVAADDITIONALOPTS
+          value: "-Dnode.store.allow_mmap=false"
+        resources:
+          limits:
+            cpu: "800m"
+            memory: "1.5Gi"
+          requests:
+            cpu: "200m"
+            memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+  namespace: monitoring
+  labels:
+    app: sonarqube
+spec:
+  ports:
+  - port: 9000
+    targetPort: 9000
+    name: http
+  selector:
+    app: sonarqube
+  type: ClusterIP

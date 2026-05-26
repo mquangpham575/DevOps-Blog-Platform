@@ -80,6 +80,7 @@ variables:
   GIT_STRATEGY: fetch
   DOCKER_DRIVER: overlay2
   DOCKER_BUILDKIT: "1"
+  SONAR_HOST_URL: "http://sonarqube.local:8000"
 
 # --- Templates (DRY Principle) ---
 .docker_build_template: &docker_build_def
@@ -354,6 +355,8 @@ deploy-frontend:
     key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
+  before_script:
+    - echo "192.168.1.197 sonarqube.local" >> /etc/hosts
   script:
     - sonar-scanner -Dsonar.projectKey=${IMAGE_NAME} -Dsonar.projectName=${IMAGE_NAME} -Dsonar.sources=${SERVICE_DIR} -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_TOKEN}
   allow_failure: true
