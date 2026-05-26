@@ -118,7 +118,7 @@ bash scripts/k3d-setup.sh
 This script:
 
 - creates `blog-dev` k3d cluster
-- maps ingress ports `8080 -> 80` and `8443 -> 443`
+- maps ingress ports `8000 -> 80` and `8443 -> 443`
 - installs ingress-nginx
 - applies `k8s/base/namespace.yaml` and `k8s/base/secrets.yaml`
 
@@ -167,16 +167,16 @@ Add on your local machine:
 
 ## Access URLs
 
-| Service       | HTTP URL                       | HTTPS URL                       |
-| ------------- | ------------------------------ | ------------------------------- |
-| Blog Frontend | `http://blog.local:8080`       | `https://blog.local:8443`       |
-| ArgoCD        | `http://argocd.local:8080`      | `https://argocd.local:8443`     |
-| Grafana       | `http://grafana.local:8080`    | `https://grafana.local:8443`    |
-| Prometheus    | `http://prometheus.local:8080` | `https://prometheus.local:8443` |
+| Service       | HTTP URL                       | HTTPS URL                       | Credentials |
+| ------------- | ------------------------------ | ------------------------------- | ----------- |
+| Blog Frontend | `http://blog.local:8000`       | `https://blog.local:8443`       | - |
+| ArgoCD        | `http://argocd.local:8000`      | `https://argocd.local:8443`     | `admin` / `l1J4voFTGLNt6nsU` |
+| Grafana       | `http://grafana.local:8000`    | `https://grafana.local:8443`    | `admin` / `admin123` |
+| Prometheus    | `http://prometheus.local:8000` | `https://prometheus.local:8443` | - |
 
 Notes:
 
-- All services are now accessible via both HTTP (port 8080) and HTTPS (port 8443).
+- All services are now accessible via both HTTP (port 8000) and HTTPS (port 8443).
 - SSL redirection is disabled to allow direct HTTP access for development.
 - Monitoring routes are exposed via ingress hostnames in `k8s/monitoring/grafana.yaml`.
 
