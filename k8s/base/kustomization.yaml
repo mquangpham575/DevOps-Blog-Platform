@@ -67,7 +67,7 @@ images:
   newTag: 479196c1
 - name: registry.gitlab.com/mquangpham575/devops/frontend
   newName: registry.gitlab.com/mquangpham575/devops/frontend
-  newTag: a5ded588
+  newTag: 479196c1
 - name: registry.gitlab.com/mquangpham575/devops/interaction-service
   newName: registry.gitlab.com/mquangpham575/devops/interaction-service
   newTag: 479196c1
