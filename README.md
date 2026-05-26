@@ -22,9 +22,11 @@ Ingress routes host traffic to the frontend service. Frontend NGINX then proxies
 
 - `blog.local` -> ingress -> `frontend` service
 - Frontend NGINX routes:
-  - `/api/auth`, `/api/users`, `/api/follow`, `/api/notifications`, `/api/messages` -> user-service
-  - `/api/blogs`, `/api/categories`, `/api/comments`, `/api/uploads` -> blog-service
+  - `/api/auth`, `/api/users`, `/api/follow` -> user-service
+  - `/api/blogs`, `/api/categories`, `/api/uploads` -> blog-service
   - `/api/files` -> file-service
+  - `/api/comments`, `/api/notifications`, `/api/messages`, `/api/internal` -> interaction-service
+  - `/api/support` -> customer-service
 
 ```mermaid
 graph TB
@@ -53,12 +55,14 @@ graph TB
 
 ## Services
 
-| Service      | Internal Port | Main Responsibility                          |
-| ------------ | ------------- | -------------------------------------------- |
-| user-service | 8081          | Auth, users, follow, notifications, messages |
-| blog-service | 8082          | Blogs, categories, comments, following feed  |
-| file-service | 8083          | File APIs and SeaweedFS integration          |
-| frontend     | 80            | React static hosting + API reverse proxy     |
+| Service             | Internal Port | Main Responsibility                                       |
+| ------------------- | ------------- | --------------------------------------------------------- |
+| user-service        | 8081          | Auth, user management, and user following profile         |
+| blog-service        | 8082          | Blogs creation, category metadata, and uploads            |
+| file-service        | 8083          | File APIs and SeaweedFS integration                       |
+| interaction-service | 8086          | Comments, notifications, and direct/system messages       |
+| customer-service    | 8087          | Support tickets and AI customer assistant integration      |
+| frontend            | 80            | React static hosting + NGINX API reverse proxy            |
 
 ## Repository Layout
 
@@ -212,7 +216,9 @@ Current behavior:
 - Builds/tests run per-service only when that service path changes.
 - Docker images are pushed on `main` for changed services.
 - Deploy jobs update image tags in `k8s/base/kustomization.yaml` and push back to `main`.
-- Trivy scan currently runs in report mode (`--exit-code 0`) and does not fail pipeline by severity.
+- Trivy scan runs as a strict security build gate (`--exit-code 1` and `allow_failure: false` for container scans).
+- JUnit test gates are enforced inside all service Dockerfiles, blocking container builds if unit tests fail.
+- Suppressed unpatchable CVEs via `.trivyignore` at the repository root.
 
 ## Monitoring
 
@@ -224,7 +230,8 @@ Current behavior:
 
 - JWT-based auth is implemented in backend services.
 - Ingress, service isolation, and Kubernetes secrets are used.
-- Repository currently includes `k8s/base/secrets.yaml` for lab/demo setup. Rotate credentials for any real environment.
+- Secrets manifests (`secrets.yaml`) are decoupled from Kustomize's `resources` blocks to avoid tracking/compilation errors. They must be applied manually to the cluster.
+- Strict security container build gates are enforced in the CI/CD pipeline using Trivy.
 - If you need stricter hardening (NetworkPolicies, restricted Pod SecurityContext, secret manager integration), add those manifests and enforcement policies.
 
 ## Useful Commands
