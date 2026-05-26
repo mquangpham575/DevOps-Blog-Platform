@@ -73,4 +73,4 @@ images:
   newTag: f170a1c7
 - name: registry.gitlab.com/mquangpham575/devops/user-service
   newName: registry.gitlab.com/mquangpham575/devops/user-service
-  newTag: f170a1c7
+  newTag: 5e6d78aa
