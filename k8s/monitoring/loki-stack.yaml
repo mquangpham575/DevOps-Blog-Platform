@@ -78,9 +78,11 @@ data:
       pipeline_stages:
       - docker: {}
       relabel_configs:
-      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-        action: keep
-        regex: true
+      - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+        separator: /
+        action: replace
+        replacement: /var/log/pods/*$1/*.log
+        target_label: __path__
       - source_labels: [__meta_kubernetes_pod_container_name]
         target_label: container
       - source_labels: [__meta_kubernetes_pod_name]
