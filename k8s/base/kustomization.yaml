@@ -73,4 +73,4 @@ images:
   newTag: b12ca2f1
 - name: registry.gitlab.com/mquangpham575/devops/user-service
   newName: registry.gitlab.com/mquangpham575/devops/user-service
-  newTag: b12ca2f1
+  newTag: 5c521249
