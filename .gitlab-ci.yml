@@ -1,4 +1,4 @@
-# Pipeline config - last updated 2026-05-26
+# Pipeline config - last updated 2026-05-26 - force run
 stages:
   - validate
   - docker-build
