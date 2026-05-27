@@ -20,3 +20,9 @@ configMapGenerator:
   - name: grafana-dashboard-spring
     files:
       - spring-services.json=grafana-dashboard-spring-services.json
+  - name: prometheus-config
+    files:
+      - prometheus.yml
+  - name: alertmanager-config
+    files:
+      - alertmanager.yml

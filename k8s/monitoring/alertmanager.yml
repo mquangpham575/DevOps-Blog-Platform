@@ -1,0 +1,17 @@
+global:
+  resolve_timeout: 5m
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'email-alerts'
+receivers:
+- name: 'email-alerts'
+  email_configs:
+  - to: 'quang8c6@gmail.com'
+    from: 'quang8c6@gmail.com'
+    smarthost: 'smtp.gmail.com:587'
+    auth_username: 'quang8c6@gmail.com'
+    auth_password: 'uzbiohpqoooerxhj'
+    require_tls: true
