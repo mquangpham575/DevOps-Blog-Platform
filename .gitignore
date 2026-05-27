@@ -28,6 +28,7 @@ dist/
 build/
 out/
 infor.md
+demo.md
 
 # Secrets (DO NOT COMMIT)
 argocd/gitlab-repo-secret.yaml
