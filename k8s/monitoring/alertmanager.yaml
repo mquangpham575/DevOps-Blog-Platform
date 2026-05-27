@@ -16,11 +16,11 @@ data:
     receivers:
     - name: 'email-alerts'
       email_configs:
-      - to: 'admin@vinh-lab.pp.ua'
-        from: 'alerts@vinh-host.duckdns.org'
+      - to: 'quang8c6@gmail.com'
+        from: 'quang8c6@gmail.com'
         smarthost: 'smtp.gmail.com:587'
-        auth_username: 'YOUR_SMTP_USER'
-        auth_password: 'YOUR_SMTP_PASSWORD'
+        auth_username: 'quang8c6@gmail.com'
+        auth_password: 'uzbiohpqoooerxhj'
         require_tls: true
 ---
 apiVersion: apps/v1
