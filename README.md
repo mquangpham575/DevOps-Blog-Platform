@@ -195,11 +195,12 @@ kubectl apply -f argocd/monitoring.yaml
 
 ### 6) Hosts file entries
 
-Add on your local machine:
+Add on your local host machine (mapping to the Proxmox VM static IP):
 
 ```text
-127.0.0.1 blog.local argocd.local grafana.local prometheus.local jaeger.local
+192.168.1.197 blog.local argocd.local grafana.local prometheus.local jaeger.local
 ```
+*(Thay thế `192.168.1.197` bằng IP chính xác của VM nếu IP thay đổi).*
 
 ## Access URLs
 
@@ -268,6 +269,18 @@ The project uses **SonarCloud** for automated static analysis and Quality Gate e
 - Spring Boot services expose actuator endpoints including `/actuator/prometheus`.
 - Prometheus + Grafana are deployed from `k8s/monitoring`.
 - Grafana datasource is auto-provisioned to Prometheus.
+- **Automated ConfigMap Rolling Updates**: ConfigMaps for Prometheus (`prometheus-config`) and Alertmanager (`alertmanager-config`) are dynamically managed using Kustomize's `configMapGenerator`. Any modifications to their respective configurations ([prometheus.yml](file:///c:/Project/devops-project/k8s/monitoring/prometheus.yml) and [alertmanager.yml](file:///c:/Project/devops-project/k8s/monitoring/alertmanager.yml)) automatically generate hashed ConfigMaps and trigger a zero-downtime rolling update of their pods via ArgoCD, eliminating manual restart requirements.
+
+## Alerting & Notification System
+
+The stack implements automated, real-time alerting using **Prometheus Alertmanager** and **Gmail SMTP integration**:
+- **Alert Ingestion & Routing**: Alertmanager aggregates and routes critical alerts to **`quang8c6@gmail.com`** using Google App Password credentials.
+- **Node & Cluster Alerting Rules**:
+  - **`PodCrashLooping`**: Tracks pod container restart frequency (`rate(kube_pod_container_status_restarts_total[5m]) * 60 > 0`) over `1m` to alert on failing microservices.
+  - **`HostOutOfMemory`**: Triggers a warning alert if available host memory falls below `10%`.
+  - **`HostDiskSpaceFilling`**: Triggers a warning alert if free disk space on the mountpoint `/` drops below `10%`.
+  - **`ServiceDown`**: Triggers a critical alert if any scraped endpoint returns `up == 0` for more than `1m`.
+
 
 ## Security Notes (Current State)
 
