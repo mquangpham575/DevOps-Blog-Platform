@@ -29,6 +29,7 @@ build/
 out/
 infor.md
 demo.md
+flows.md
 
 # Secrets (DO NOT COMMIT)
 argocd/gitlab-repo-secret.yaml
