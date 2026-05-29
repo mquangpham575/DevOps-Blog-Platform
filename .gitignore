@@ -30,6 +30,7 @@ out/
 infor.md
 demo.md
 flows.md
+Baocao/
 
 # Secrets (DO NOT COMMIT)
 argocd/gitlab-repo-secret.yaml

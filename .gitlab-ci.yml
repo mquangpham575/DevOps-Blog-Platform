@@ -255,6 +255,10 @@ scan-frontend:
         git checkout -f origin/main
         cd k8s/base
         kustomize edit set image $CI_REGISTRY_IMAGE/$SERVICE_NAME=$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
+        if ! kustomize build . > /dev/null; then
+          echo "Error: Kustomize build validation failed."
+          exit 1
+        fi
         cd ../..
         git add k8s/base/kustomization.yaml
         if git diff --cached --quiet; then
@@ -356,7 +360,7 @@ deploy-frontend:
       - .sonar/cache
   script:
     - sonar-scanner -Dsonar.projectKey=${SONAR_ORGANIZATION}_${IMAGE_NAME} -Dsonar.projectName=${IMAGE_NAME} -Dsonar.sources=${SERVICE_DIR} -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_TOKEN} -Dsonar.organization=${SONAR_ORGANIZATION} -Dsonar.java.binaries=. -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/.next/**,**/*.min.js -Dsonar.javascript.node.maxspace=1400 -Dsonar.javascript.createTSProgramForOrphanFiles=false -Dsonar.coverage.exclusions=**/*
-  allow_failure: true
+  allow_failure: false
 
 sonar-user-service:
   extends:
