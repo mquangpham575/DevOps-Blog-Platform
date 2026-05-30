@@ -5,6 +5,8 @@ This folder contains ArgoCD resources used by the platform.
 ## Files
 
 - `project.yaml`: ArgoCD AppProject (`blog-platform`)
+- `postgres.yaml`: ArgoCD Application for Bitnami PostgreSQL Helm Chart
+- `seaweedfs.yaml`: ArgoCD Application for official SeaweedFS Helm Chart
 - `blog-app.yaml`: ArgoCD Application for `k8s/overlays/dev` to namespace `blog-app`
 - `monitoring.yaml`: ArgoCD Application for `k8s/monitoring` to namespace `monitoring`
 - `ingress.yaml`: Ingress for ArgoCD server at `argocd.local`
@@ -34,6 +36,8 @@ cp argocd/gitlab-repo-secret.yaml.template argocd/gitlab-repo-secret.yaml
 ```bash
 kubectl apply -f argocd/gitlab-repo-secret.yaml
 kubectl apply -f argocd/project.yaml
+kubectl apply -f argocd/postgres.yaml
+kubectl apply -f argocd/seaweedfs.yaml
 kubectl apply -f argocd/blog-app.yaml
 kubectl apply -f argocd/monitoring.yaml
 ```

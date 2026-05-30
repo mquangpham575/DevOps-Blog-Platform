@@ -8,8 +8,8 @@ Microservices-based blog application for NT548.Q21 DevOps coursework.
 | -------------- | ------------------------------- | --------------------------------------------- |
 | Frontend       | React + Vite + Tailwind + NGINX | SPA UI and API reverse proxy                  |
 | Backend        | Spring Boot (Java 17)           | User, Blog, File microservices                |
-| Databases      | PostgreSQL                      | One DB per service                            |
-| Object Storage | SeaweedFS                       | File storage backend                          |
+| Databases      | PostgreSQL                      | Consolidated instance (one database per service) |
+| Object Storage | SeaweedFS                       | Official Helm Chart backend                   |
 | Orchestration  | Kubernetes (k3d)                | Local cluster runtime                         |
 | GitOps         | ArgoCD                          | Sync from Git to cluster                      |
 | CI/CD          | GitLab CI                       | Build, test, image push, manifest tag updates |
@@ -189,6 +189,8 @@ kubectl create secret docker-registry gitlab-registry \
 
 ```bash
 kubectl apply -f argocd/project.yaml
+kubectl apply -f argocd/postgres.yaml
+kubectl apply -f argocd/seaweedfs.yaml
 kubectl apply -f argocd/blog-app.yaml
 kubectl apply -f argocd/monitoring.yaml
 ```
