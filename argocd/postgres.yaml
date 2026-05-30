@@ -12,6 +12,8 @@ spec:
     helm:
       values: |
         fullnameOverride: postgres
+        image:
+          tag: latest
         auth:
           username: devops_admin
           database: postgres
