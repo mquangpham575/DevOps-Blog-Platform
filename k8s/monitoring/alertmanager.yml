@@ -13,5 +13,5 @@ receivers:
     from: 'quang8c6@gmail.com'
     smarthost: 'smtp.gmail.com:587'
     auth_username: 'quang8c6@gmail.com'
-    auth_password: 'uzbiohpqoooerxhj'
+    auth_password_file: /etc/alertmanager-secrets/smtp_password
     require_tls: true

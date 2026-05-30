@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres-db
+  namespace: argocd
+spec:
+  project: blog-platform
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: postgresql
+    targetRevision: 15.2.5
+    helm:
+      values: |
+        fullnameOverride: postgres
+        auth:
+          username: devops_admin
+          database: postgres
+          existingSecret: db-credentials
+          secretKeys:
+            userPasswordKey: POSTGRES_PASSWORD
+            adminPasswordKey: POSTGRES_PASSWORD
+        primary:
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          persistence:
+            enabled: true
+            size: 1Gi
+          initdb:
+            scripts:
+              init-databases.sh: |
+                #!/bin/bash
+                set -e
+                psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+                  CREATE DATABASE user_service_db;
+                  CREATE DATABASE blog_service_db;
+                  CREATE DATABASE file_service_db;
+                  CREATE DATABASE customer_service_db;
+                  CREATE DATABASE interaction_service_db;
+                EOSQL
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: blog-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

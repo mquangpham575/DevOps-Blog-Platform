@@ -43,7 +43,7 @@ spec:
             - name: SERVER_PORT
               value: "8083"
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:postgresql://file-db:5432/file_service_db
+              value: jdbc:postgresql://postgres:5432/file_service_db
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:

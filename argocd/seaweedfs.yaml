@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: seaweedfs
+  namespace: argocd
+spec:
+  project: blog-platform
+  source:
+    repoURL: https://seaweedfs.github.io/seaweedfs/helm
+    chart: seaweedfs
+    targetRevision: 3.59.0
+    helm:
+      values: |
+        fullnameOverride: seaweedfs
+        master:
+          replicas: 1
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+        volume:
+          replicas: 1
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+        filer:
+          replicas: 1
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: blog-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
