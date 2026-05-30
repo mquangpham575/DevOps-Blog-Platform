@@ -37,7 +37,7 @@ spec:
               init-databases.sh: |
                 #!/bin/bash
                 set -e
-                psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+                psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DATABASE" <<-EOSQL
                   CREATE DATABASE user_service_db OWNER devops_admin;
                   CREATE DATABASE blog_service_db OWNER devops_admin;
                   CREATE DATABASE file_service_db OWNER devops_admin;
