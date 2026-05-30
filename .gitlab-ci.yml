@@ -153,6 +153,10 @@ prepare-trivy-db:
   dependencies: []
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/**/*
+        - frontend/**/*
+        - .gitlab-ci.yml
   script:
     - trivy image --download-db-only --db-repository public.ecr.aws/aquasecurity/trivy-db --cache-dir $TRIVY_CACHE_DIR
 
