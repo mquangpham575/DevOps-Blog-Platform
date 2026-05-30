@@ -8,8 +8,8 @@ Microservices-based blog application for NT548.Q21 DevOps coursework.
 | -------------- | ------------------------------- | --------------------------------------------- |
 | Frontend       | React + Vite + Tailwind + NGINX | SPA UI and API reverse proxy                  |
 | Backend        | Spring Boot (Java 17)           | User, Blog, File microservices                |
-| Databases      | PostgreSQL                      | Consolidated instance (one database per service) |
-| Object Storage | SeaweedFS                       | Official Helm Chart backend                   |
+| Databases      | PostgreSQL (Bitnami Helm)      | Unified single instance with isolated schemas |
+| Object Storage | SeaweedFS (Official Helm)       | Managed object storage under Argo CD          |
 | Orchestration  | Kubernetes (k3d)                | Local cluster runtime                         |
 | GitOps         | ArgoCD                          | Sync from Git to cluster                      |
 | CI/CD          | GitLab CI                       | Build, test, image push, manifest tag updates |
@@ -85,7 +85,9 @@ argocd/
   README.md
   blog-app.yaml
   monitoring.yaml
+  postgres.yaml
   project.yaml
+  seaweedfs.yaml
   ingress.yaml
   gitlab-repo-secret.yaml.template
 
@@ -100,17 +102,11 @@ frontend/
 
 k8s/
   base/
-    blog-db/
     blog-service/
-    customer-db/
     customer-service/
-    file-db/
     file-service/
     frontend/
-    interaction-db/
     interaction-service/
-    seaweedfs/
-    user-db/
     user-service/
     kustomization.yaml
     namespace.yaml
@@ -189,8 +185,6 @@ kubectl create secret docker-registry gitlab-registry \
 
 ```bash
 kubectl apply -f argocd/project.yaml
-kubectl apply -f argocd/postgres.yaml
-kubectl apply -f argocd/seaweedfs.yaml
 kubectl apply -f argocd/blog-app.yaml
 kubectl apply -f argocd/monitoring.yaml
 ```
