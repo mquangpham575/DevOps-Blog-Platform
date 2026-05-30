@@ -50,4 +50,4 @@ management:
       exposure:
         include: health,info,prometheus
 
-# demo: test trigger incre
+# demo: test trigger incre pipeline
