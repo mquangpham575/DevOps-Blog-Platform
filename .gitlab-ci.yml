@@ -373,6 +373,8 @@ sonar-user-service:
   variables:
     IMAGE_NAME: "user-service"
     SERVICE_DIR: "backend/user-service"
+  needs:
+    - docker-user-service
 
 sonar-blog-service:
   extends:
@@ -382,6 +384,7 @@ sonar-blog-service:
     IMAGE_NAME: "blog-service"
     SERVICE_DIR: "backend/blog-service"
   needs:
+    - docker-blog-service
     - job: sonar-user-service
       optional: true
 
@@ -393,6 +396,7 @@ sonar-file-service:
     IMAGE_NAME: "file-service"
     SERVICE_DIR: "backend/file-service"
   needs:
+    - docker-file-service
     - job: sonar-blog-service
       optional: true
 
@@ -404,6 +408,7 @@ sonar-customer-service:
     IMAGE_NAME: "customer-service"
     SERVICE_DIR: "backend/customer-service"
   needs:
+    - docker-customer-service
     - job: sonar-file-service
       optional: true
 
@@ -415,6 +420,7 @@ sonar-interaction-service:
     IMAGE_NAME: "interaction-service"
     SERVICE_DIR: "backend/interaction-service"
   needs:
+    - docker-interaction-service
     - job: sonar-customer-service
       optional: true
 
